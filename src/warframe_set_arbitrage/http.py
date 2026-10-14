@@ -10,8 +10,8 @@ from urllib.parse import urlsplit
 
 import httpx
 
-USER_AGENT = "wfspread/0.1 (+https://github.com/; personal spread checker)"
-CACHE_DIR = Path(os.environ.get("WFSPREAD_CACHE", Path.home() / ".cache" / "wfspread"))
+USER_AGENT = "warframe-set-arbitrage/0.1 (+https://github.com/LucasRibeiroCaetano/warframe-set-arbitrage)"
+CACHE_DIR = Path(os.environ.get("WFSPREAD_CACHE", Path.home() / ".cache" / "warframe-set-arbitrage"))
 
 # warframe.market asks clients to stay at or below ~3 requests/second.
 THROTTLED_HOSTS = {"api.warframe.market"}

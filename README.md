@@ -1,4 +1,4 @@
-# wfspread
+# warframe-set-arbitrage
 
 Quick check of **set vs. parts** spreads on [warframe.market](https://warframe.market) for the primes that are
 actually farmable right now:
@@ -14,7 +14,7 @@ show everything that drops. Warframes and weapons are shown in separate tables.
 ## Run
 
 ```bash
-uv run wfspread
+uv run wfspread                        # short alias for: uv run warframe-set-arbitrage
 ```
 
 warframe.market allows about 3 requests/second, and each set and each of its parts needs one request for orders and
@@ -57,5 +57,5 @@ the site, so real volume is higher. `-d` also shows per-part 48h and 7d volume a
   to frames by release date.
 - Varzia stock: `api.warframestat.us/pc/vaultTrader`, cached for 1 h.
 
-Metadata is cached in `~/.cache/wfspread`. You can override that path with `WFSPREAD_CACHE`. Pass `--refresh` to refetch it.
+Metadata is cached in `~/.cache/warframe-set-arbitrage`. You can override that path with `WFSPREAD_CACHE`. Pass `--refresh` to refetch it.
 Order prices are never cached.

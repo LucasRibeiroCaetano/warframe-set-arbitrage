@@ -1,5 +1,5 @@
 [project]
-name = "wfspread"
+name = "warframe-set-arbitrage"
 version = "0.1.0"
 description = "Set vs. parts spreads on warframe.market for unvaulted and Prime Resurgence primes"
 readme = "README.md"
@@ -13,7 +13,8 @@ dependencies = [
 ]
 
 [project.scripts]
-wfspread = "wfspread:main"
+warframe-set-arbitrage = "warframe_set_arbitrage:main"
+wfspread = "warframe_set_arbitrage:main"
 
 [build-system]
 requires = ["uv_build>=0.10.9,<0.11.0"]
