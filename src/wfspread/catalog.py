@@ -4,8 +4,10 @@
   in the official drop tables (missions, bounties, etc.).
 - Prime Resurgence: a prime sold by Varzia in the current rotation (worldstate).
 
-Weapons in the permanent relic pool (never vaulted, e.g. Braton/Lex/Paris Prime) are
-dropped by default, since they're always farmable.
+Unvaulted weapons are only kept when they were released in the same Prime Access as
+an unvaulted warframe that is still in its first cycle (never vaulted). That drops the
+permanent relic pool (Braton, Lex, Paris Prime, ...) and old weapons that came back
+alongside re-released frames (e.g. Cernos/Venka with Valkyr Prime).
 """
 
 from __future__ import annotations
@@ -20,7 +22,9 @@ from .http import Http
 MARKET = "https://api.warframe.market/v2"
 DROPS_ALL = "https://drops.warframestat.us/data/all.json"
 VARZIA = "https://api.warframestat.us/pc/vaultTrader?language=en"
-WEAPONS = "https://api.warframestat.us/weapons/?language=en&only=name,vaulted,vaultDate,estimatedVaultDate"
+WFCD_FIELDS = "language=en&only=name,vaulted,vaultDate,releaseDate"
+WFCD_WEAPONS = f"https://api.warframestat.us/weapons/?{WFCD_FIELDS}"
+WFCD_FRAMES = f"https://api.warframestat.us/warframes/?{WFCD_FIELDS}"
 
 HOUR = 3600
 DAY = 24 * HOUR
@@ -55,7 +59,7 @@ class Catalog:
     targets: list[Target]
     pr_expiry: datetime | None
     drops_updated: datetime | None
-    hidden_permanent: list[str] = field(default_factory=list)
+    hidden_weapons: list[str] = field(default_factory=list)
 
 
 def _name(item: dict) -> str:
@@ -108,18 +112,16 @@ def resurgence_game_refs(http: Http) -> tuple[set[str], datetime | None]:
     return refs, _parse_ts(trader.get("expiry"))
 
 
-def permanent_weapons(http: Http) -> set[str]:
-    """Prime weapons that are never vaulted: still unvaulted over a year past their estimated vault date."""
-    cutoff = (datetime.now(timezone.utc) - timedelta(days=365)).date().isoformat()
-    weapons = http.cached_json("wfcd_weapons", WEAPONS, ttl=7 * DAY)
-    return {
-        w["name"]
-        for w in weapons
-        if w.get("name", "").endswith(" Prime")
-        and not w.get("vaulted")
-        and not w.get("vaultDate")
-        and (w.get("estimatedVaultDate") or "9999") < cutoff
-    }
+def release_info(http: Http) -> dict[str, dict]:
+    """WFCD release/vault data for every warframe and weapon, by name."""
+    frames = http.cached_json("wfcd_frames", WFCD_FRAMES, ttl=7 * DAY)
+    weapons = http.cached_json("wfcd_weapons", WFCD_WEAPONS, ttl=7 * DAY)
+    return {x["name"]: x for x in [*frames, *weapons] if x.get("name")}
+
+
+def _fresh(info: dict | None) -> bool:
+    """In its first Prime Access cycle: has never been vaulted."""
+    return bool(info) and not info.get("vaulted") and not info.get("vaultDate")
 
 
 def set_parts(http: Http, set_slug: str) -> list[Part]:
@@ -131,7 +133,7 @@ def set_parts(http: Http, set_slug: str) -> list[Part]:
     ]
 
 
-def build_catalog(http: Http, include_permanent: bool = False) -> Catalog:
+def build_catalog(http: Http, all_weapons: bool = False) -> Catalog:
     items = http.cached_json("market_items", f"{MARKET}/items", ttl=DAY)["data"]
     sets_by_name = {_name(i): i for i in items if "set" in i["tags"] and "prime" in i["tags"]}
     sets_by_ref = {i["gameRef"]: i for i in sets_by_name.values()}
@@ -157,11 +159,23 @@ def build_catalog(http: Http, include_permanent: bool = False) -> Catalog:
             add(item, RESURGENCE)
 
     hidden: list[str] = []
-    if not include_permanent:
-        permanent = permanent_weapons(http)
+    if not all_weapons:
+        info = release_info(http)
+
+        def base(t: Target) -> str:
+            return t.name.removesuffix(" Set")
+
+        fresh_frame_dates = {
+            info[base(t)]["releaseDate"]
+            for t in targets.values()
+            if t.kind == "frame" and UNVAULTED in t.sources and _fresh(info.get(base(t)))
+        }
         for slug, t in list(targets.items()):
-            if t.kind == "weapon" and t.sources == {UNVAULTED} and t.name.removesuffix(" Set") in permanent:
-                hidden.append(t.name.removesuffix(" Set"))
+            if t.kind != "weapon" or t.sources != {UNVAULTED}:
+                continue
+            w = info.get(base(t))
+            if not (_fresh(w) and w.get("releaseDate") in fresh_frame_dates):
+                hidden.append(base(t))
                 del targets[slug]
 
     for t in targets.values():
@@ -170,4 +184,4 @@ def build_catalog(http: Http, include_permanent: bool = False) -> Catalog:
             t.partial = any(p.name not in dropping_parts for p in t.parts)
 
     ordered = sorted(targets.values(), key=lambda t: (t.kind != "frame", t.name))
-    return Catalog(targets=ordered, pr_expiry=pr_expiry, drops_updated=drops_updated, hidden_permanent=sorted(hidden))
+    return Catalog(targets=ordered, pr_expiry=pr_expiry, drops_updated=drops_updated, hidden_weapons=sorted(hidden))

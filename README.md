@@ -6,9 +6,10 @@ actually farmable right now:
 - **Unvaulted**: primes whose parts drop from relics in the current official drop tables.
 - **Prime Resurgence (PR)**: primes in Varzia's current rotation.
 
-Vaulted primes are skipped. Weapons in the permanent relic pool are hidden by default: these are weapons that have
-never been vaulted and are over a year past their estimated vault date, such as Braton, Lex and Paris Prime. Pass
-`--include-permanent` to show them. Warframes and weapons are shown in separate tables.
+Vaulted primes are skipped. Unvaulted weapons are only shown when they came out in the same Prime Access as an
+unvaulted warframe that hasn't been vaulted yet. That hides permanent-pool weapons like Braton, Lex and Paris Prime. It
+also hides old weapons that came back with a re-released frame, such as Cernos and Venka with Valkyr Prime. Pass
+`--all-weapons` to show every unvaulted weapon. Warframes and weapons are shown in separate tables.
 
 ## Run
 
@@ -52,7 +53,8 @@ the site, so real volume is higher. `-d` also shows per-part 48h and 7d volume a
 - Volume: `api.warframe.market/v1/items/{slug}/statistics` (closed-trade stats), cached for 1 h.
 - Set composition: `api.warframe.market/v2/item/{slug}/set`, cached for 7 days.
 - Unvaulted relics: `drops.warframestat.us/data/all.json` (DE's official drop tables), cached for 12 h.
-- Permanent weapons: `api.warframestat.us/weapons` (WFCD vault data), cached for 7 days.
+- Release/vault history: `api.warframestat.us/warframes` and `/weapons` (WFCD), cached for 7 days. Weapons are matched
+  to frames by release date.
 - Varzia stock: `api.warframestat.us/pc/vaultTrader`, cached for 1 h.
 
 Metadata is cached in `~/.cache/wfspread`. You can override that path with `WFSPREAD_CACHE`. Pass `--refresh` to refetch it.

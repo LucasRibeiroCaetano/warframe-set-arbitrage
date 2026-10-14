@@ -35,8 +35,8 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     p.add_argument("-f", "--filter", help="only sets whose name contains this text")
     p.add_argument("--sort", choices=["name", *SORTS], default="delta-wts")
     p.add_argument("--depth", type=int, default=1, help="average the best N orders per side (default 1)")
-    p.add_argument("--include-permanent", action="store_true",
-                   help="include never-vaulted weapons (Braton, Lex, Paris Prime, ...)")
+    p.add_argument("--all-weapons", action="store_true",
+                   help="show every unvaulted weapon, not just those released with an unvaulted warframe")
     p.add_argument("--no-partial", action="store_true", help="skip unvaulted sets missing a dropping part")
     p.add_argument("--no-volume", action="store_true", help="skip trade volume (halves requests when uncached)")
     p.add_argument("-d", "--detail", action="store_true", help="show a per-part breakdown for each set")
@@ -91,7 +91,7 @@ def main(argv: list[str] | None = None) -> int:
     http = Http(rps=args.rps, refresh=args.refresh, platform=args.platform)
     try:
         with console.status("Loading drop tables, Varzia stock and set lists…"):
-            catalog = build_catalog(http, include_permanent=args.include_permanent)
+            catalog = build_catalog(http, all_weapons=args.all_weapons)
 
         targets = catalog.targets
         if args.source == "pr":
@@ -247,9 +247,10 @@ def render(console: Console, spreads: list[SetSpread], catalog, args: argparse.N
             "Vol = trades closed on warframe.market (self-reported, so real volume is higher). "
             "Min part vol = least-traded part, the bottleneck when building or splitting a set."
         )
-    if catalog.hidden_permanent:
+    if catalog.hidden_weapons:
         notes.append(
-            f"Hidden (never vaulted, --include-permanent to show): {', '.join(catalog.hidden_permanent)}."
+            "Hidden: unvaulted weapons not released with a current unvaulted warframe (--all-weapons to show): "
+            f"{', '.join(catalog.hidden_weapons)}."
         )
     if catalog.pr_expiry:
         notes.append(f"Prime Resurgence rotation ends {catalog.pr_expiry.astimezone():%Y-%m-%d %H:%M}.")
