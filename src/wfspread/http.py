@@ -68,16 +68,23 @@ class Http:
             return resp.json()
         raise RuntimeError(f"unreachable: {url}")
 
-    def cached_json(self, key: str, url: str, ttl: float):
+    def is_cached(self, key: str, ttl: float) -> bool:
+        path = CACHE_DIR / f"{key}.json"
+        return not self.refresh and path.exists() and time.time() - path.stat().st_mtime < ttl
+
+    def cached_json(self, key: str, url: str, ttl: float, transform=None):
         """Fetch JSON, reusing a cached copy younger than `ttl` seconds.
 
+        `transform` reduces the response before it is cached and returned.
         If the fetch fails and a stale copy exists, the stale copy is returned.
         """
         path = CACHE_DIR / f"{key}.json"
-        if not self.refresh and path.exists() and time.time() - path.stat().st_mtime < ttl:
+        if self.is_cached(key, ttl):
             return json.loads(path.read_text(encoding="utf-8"))
         try:
             data = self.get_json(url)
+            if transform:
+                data = transform(data)
         except (httpx.HTTPError, ValueError):
             if path.exists():
                 return json.loads(path.read_text(encoding="utf-8"))

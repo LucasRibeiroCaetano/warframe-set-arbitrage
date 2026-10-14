@@ -41,6 +41,41 @@ def fetch_quote(http: Http, slug: str, depth: int = 1) -> Quote:
     )
 
 
+STATS_URL = "https://api.warframe.market/v1/items/{slug}/statistics"
+STATS_TTL = 3600  # warframe.market aggregates these hourly
+
+
+@dataclass
+class Volume:
+    """Trades players closed on warframe.market (self-reported, so a lower bound)."""
+
+    vol_48h: int
+    vol_7d: int
+    avg_48h: float | None  # volume-weighted average sold price over 48h
+
+
+def _reduce_stats(payload: dict) -> dict:
+    closed = payload["payload"]["statistics_closed"]
+    # Mods carry one series per rank; prime parts/sets have no rank.
+    hourly = [b for b in closed.get("48hours", []) if not b.get("mod_rank")]
+    daily = [b for b in closed.get("90days", []) if not b.get("mod_rank")]
+    vol_48h = sum(b["volume"] for b in hourly)
+    return {
+        "vol_48h": vol_48h,
+        "vol_7d": sum(b["volume"] for b in daily[-7:]),
+        "avg_48h": sum(b["avg_price"] * b["volume"] for b in hourly) / vol_48h if vol_48h else None,
+    }
+
+
+def stats_cached(http: Http, slug: str) -> bool:
+    return http.is_cached(f"stats_{slug}", STATS_TTL)
+
+
+def fetch_volume(http: Http, slug: str) -> Volume:
+    data = http.cached_json(f"stats_{slug}", STATS_URL.format(slug=slug), ttl=STATS_TTL, transform=_reduce_stats)
+    return Volume(**data)
+
+
 def _sum(values: list[float | None]) -> float | None:
     return None if any(v is None for v in values) else sum(values)  # type: ignore[arg-type]
 
@@ -54,6 +89,18 @@ class SetSpread:
     target: Target
     set_quote: Quote
     part_quotes: dict[str, Quote]
+    volumes: dict[str, Volume] | None = None  # by slug, for the set and its parts
+
+    @property
+    def set_volume(self) -> Volume | None:
+        return self.volumes.get(self.target.slug) if self.volumes else None
+
+    @property
+    def min_part_vol_48h(self) -> int | None:
+        """48h volume of the least-traded part: the bottleneck when building or splitting a set."""
+        if not self.volumes:
+            return None
+        return min(self.volumes[p.slug].vol_48h for p in self.target.parts)
 
     @property
     def parts_wts(self) -> float | None:
