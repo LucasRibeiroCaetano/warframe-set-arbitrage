@@ -3,6 +3,9 @@
 - Unvaulted: a prime whose parts appear in a relic that currently drops somewhere
   in the official drop tables (missions, bounties, etc.).
 - Prime Resurgence: a prime sold by Varzia in the current rotation (worldstate).
+
+Weapons in the permanent relic pool (never vaulted, e.g. Braton/Lex/Paris Prime) are
+dropped by default, since they're always farmable.
 """
 
 from __future__ import annotations
@@ -10,13 +13,14 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 from .http import Http
 
 MARKET = "https://api.warframe.market/v2"
 DROPS_ALL = "https://drops.warframestat.us/data/all.json"
 VARZIA = "https://api.warframestat.us/pc/vaultTrader?language=en"
+WEAPONS = "https://api.warframestat.us/weapons/?language=en&only=name,vaulted,vaultDate,estimatedVaultDate"
 
 HOUR = 3600
 DAY = 24 * HOUR
@@ -51,6 +55,7 @@ class Catalog:
     targets: list[Target]
     pr_expiry: datetime | None
     drops_updated: datetime | None
+    hidden_permanent: list[str] = field(default_factory=list)
 
 
 def _name(item: dict) -> str:
@@ -103,6 +108,20 @@ def resurgence_game_refs(http: Http) -> tuple[set[str], datetime | None]:
     return refs, _parse_ts(trader.get("expiry"))
 
 
+def permanent_weapons(http: Http) -> set[str]:
+    """Prime weapons that are never vaulted: still unvaulted over a year past their estimated vault date."""
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=365)).date().isoformat()
+    weapons = http.cached_json("wfcd_weapons", WEAPONS, ttl=7 * DAY)
+    return {
+        w["name"]
+        for w in weapons
+        if w.get("name", "").endswith(" Prime")
+        and not w.get("vaulted")
+        and not w.get("vaultDate")
+        and (w.get("estimatedVaultDate") or "9999") < cutoff
+    }
+
+
 def set_parts(http: Http, set_slug: str) -> list[Part]:
     data = http.cached_json(f"set_{set_slug}", f"{MARKET}/item/{set_slug}/set", ttl=7 * DAY)
     return [
@@ -112,7 +131,7 @@ def set_parts(http: Http, set_slug: str) -> list[Part]:
     ]
 
 
-def build_catalog(http: Http) -> Catalog:
+def build_catalog(http: Http, include_permanent: bool = False) -> Catalog:
     items = http.cached_json("market_items", f"{MARKET}/items", ttl=DAY)["data"]
     sets_by_name = {_name(i): i for i in items if "set" in i["tags"] and "prime" in i["tags"]}
     sets_by_ref = {i["gameRef"]: i for i in sets_by_name.values()}
@@ -137,10 +156,18 @@ def build_catalog(http: Http) -> Catalog:
         if item := sets_by_ref.get(ref):
             add(item, RESURGENCE)
 
+    hidden: list[str] = []
+    if not include_permanent:
+        permanent = permanent_weapons(http)
+        for slug, t in list(targets.items()):
+            if t.kind == "weapon" and t.sources == {UNVAULTED} and t.name.removesuffix(" Set") in permanent:
+                hidden.append(t.name.removesuffix(" Set"))
+                del targets[slug]
+
     for t in targets.values():
         t.parts = set_parts(http, t.slug)
         if t.sources == {UNVAULTED}:
             t.partial = any(p.name not in dropping_parts for p in t.parts)
 
     ordered = sorted(targets.values(), key=lambda t: (t.kind != "frame", t.name))
-    return Catalog(targets=ordered, pr_expiry=pr_expiry, drops_updated=drops_updated)
+    return Catalog(targets=ordered, pr_expiry=pr_expiry, drops_updated=drops_updated, hidden_permanent=sorted(hidden))

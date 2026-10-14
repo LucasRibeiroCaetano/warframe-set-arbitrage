@@ -17,7 +17,6 @@ from .pricing import Quote, SetSpread, Volume, fetch_quote, fetch_volume, stats_
 SORTS = {
     "delta-wts": lambda s: s.delta_wts,
     "delta-wtb": lambda s: s.delta_wtb,
-    "flip": lambda s: s.flip,
     "set-wts": lambda s: s.set_quote.wts,
     "set-spread": lambda s: s.set_quote.spread,
     "volume": lambda s: s.set_volume.vol_48h if s.set_volume else None,
@@ -36,6 +35,8 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     p.add_argument("-f", "--filter", help="only sets whose name contains this text")
     p.add_argument("--sort", choices=["name", *SORTS], default="delta-wts")
     p.add_argument("--depth", type=int, default=1, help="average the best N orders per side (default 1)")
+    p.add_argument("--include-permanent", action="store_true",
+                   help="include never-vaulted weapons (Braton, Lex, Paris Prime, ...)")
     p.add_argument("--no-partial", action="store_true", help="skip unvaulted sets missing a dropping part")
     p.add_argument("--no-volume", action="store_true", help="skip trade volume (halves requests when uncached)")
     p.add_argument("-d", "--detail", action="store_true", help="show a per-part breakdown for each set")
@@ -90,7 +91,7 @@ def main(argv: list[str] | None = None) -> int:
     http = Http(rps=args.rps, refresh=args.refresh, platform=args.platform)
     try:
         with console.status("Loading drop tables, Varzia stock and set lists…"):
-            catalog = build_catalog(http)
+            catalog = build_catalog(http, include_permanent=args.include_permanent)
 
         targets = catalog.targets
         if args.source == "pr":
@@ -169,7 +170,6 @@ def spread_table(title: str, spreads: list[SetSpread], with_volume: bool) -> Tab
         table.add_column("Min part\nvol 48h", justify="right")
     table.add_column("Δ WTS", justify="right")
     table.add_column("Δ WTB", justify="right")
-    table.add_column("Flip", justify="right")
 
     for s in spreads:
         row = [
@@ -184,7 +184,7 @@ def spread_table(title: str, spreads: list[SetSpread], with_volume: bool) -> Tab
         row += [fmt_parts(s, "wts"), fmt_parts(s, "wtb")]
         if with_volume:
             row.append(fmt_vol(s.min_part_vol_48h))
-        row += [fmt_delta(s.delta_wts), fmt_delta(s.delta_wtb), fmt_delta(s.flip)]
+        row += [fmt_delta(s.delta_wts), fmt_delta(s.delta_wtb)]
         table.add_row(*row)
     return table
 
@@ -239,14 +239,17 @@ def render(console: Console, spreads: list[SetSpread], catalog, args: argparse.N
     notes = [
         "Δ WTS = set WTS − Σ part WTS  (+ → parts are cheaper to buy than the set; build and sell the set)",
         "Δ WTB = set WTB − Σ part WTB  (− → buyers pay more for loose parts; sell parts, not the set)",
-        "Flip  = set WTB − Σ part WTS  (+ → instant profit buying parts and selling the set to a buyer)",
         "Prices are the best orders from players currently in game. ≥N = some part has no in-game order on that side.",
         "Unv = parts drop from current relics · Unv* = some part isn't in a dropping relic · PR = Varzia's current stock.",
     ]
     if with_volume:
         notes.append(
             "Vol = trades closed on warframe.market (self-reported, so real volume is higher). "
-            "Min part vol = least-traded part, the bottleneck for flipping."
+            "Min part vol = least-traded part, the bottleneck when building or splitting a set."
+        )
+    if catalog.hidden_permanent:
+        notes.append(
+            f"Hidden (never vaulted, --include-permanent to show): {', '.join(catalog.hidden_permanent)}."
         )
     if catalog.pr_expiry:
         notes.append(f"Prime Resurgence rotation ends {catalog.pr_expiry.astimezone():%Y-%m-%d %H:%M}.")
@@ -260,13 +263,13 @@ def write_csv(path: str, spreads: list[SetSpread]) -> None:
     with open(path, "w", newline="", encoding="utf-8") as fh:
         w = csv.writer(fh)
         w.writerow(["set", "type", "sources", "partial", "set_wts", "set_wtb", "set_vol_48h", "set_vol_7d",
-                    "parts_wts", "parts_wtb", "min_part_vol_48h", "delta_wts", "delta_wtb", "flip"])
+                    "parts_wts", "parts_wtb", "min_part_vol_48h", "delta_wts", "delta_wtb"])
         for s in spreads:
             t = s.target
             v = s.set_volume
             w.writerow([t.name, t.kind, "+".join(sorted(t.sources)), t.partial, s.set_quote.wts,
                         s.set_quote.wtb, v and v.vol_48h, v and v.vol_7d, s.parts_wts, s.parts_wtb,
-                        s.min_part_vol_48h, s.delta_wts, s.delta_wtb, s.flip])
+                        s.min_part_vol_48h, s.delta_wts, s.delta_wtb])
 
 
 if __name__ == "__main__":

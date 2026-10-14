@@ -133,11 +133,6 @@ class SetSpread:
         """Set WTB minus parts WTB. Positive: buyers pay more for the set."""
         return _diff(self.set_quote.wtb, self.parts_wtb)
 
-    @property
-    def flip(self) -> float | None:
-        """Instant arbitrage: buy all parts from sellers, sell the set to the best buyer."""
-        return _diff(self.set_quote.wtb, self.parts_wts)
-
 
 def _mul(v: float | None, qty: int) -> float | None:
     return None if v is None else v * qty

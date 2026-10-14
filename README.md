@@ -6,7 +6,9 @@ actually farmable right now:
 - **Unvaulted**: primes whose parts drop from relics in the current official drop tables.
 - **Prime Resurgence (PR)**: primes in Varzia's current rotation.
 
-Vaulted primes are skipped. Warframes and weapons are shown in separate tables.
+Vaulted primes are skipped. Weapons in the permanent relic pool are hidden by default: these are weapons that have
+never been vaulted and are over a year past their estimated vault date, such as Braton, Lex and Paris Prime. Pass
+`--include-permanent` to show them. Warframes and weapons are shown in separate tables.
 
 ## Run
 
@@ -23,7 +25,7 @@ uv run wfspread --source pr            # only Prime Resurgence
 uv run wfspread --type frames          # only warframes
 uv run wfspread -f ivara -d            # one set, with per-part breakdown
 uv run wfspread --depth 3              # average top 3 orders (ignores bait listings)
-uv run wfspread --sort flip --csv spreads.csv
+uv run wfspread --sort delta-wtb --csv spreads.csv
 uv run wfspread --sort volume          # most-traded sets first
 ```
 
@@ -38,7 +40,6 @@ uv run wfspread --sort volume          # most-traded sets first
 | Min part vol 48h | 48h volume of the least-traded part, which is the bottleneck when you build or split a set |
 | Δ WTS | Set WTS − Parts WTS Σ. **+** → buying parts is cheaper than buying the set (build and sell the set) |
 | Δ WTB | Set WTB − Parts WTB Σ. **−** → buyers pay more for loose parts than for the set |
-| Flip | Set WTB − Parts WTS Σ. **+** → instant profit: buy every part from sellers, sell the set to the top buyer |
 
 Src: `PR` is Varzia's current stock, `Unv` is fully dropping, and `Unv*` means a part isn't in any currently dropping relic.
 
@@ -51,6 +52,7 @@ the site, so real volume is higher. `-d` also shows per-part 48h and 7d volume a
 - Volume: `api.warframe.market/v1/items/{slug}/statistics` (closed-trade stats), cached for 1 h.
 - Set composition: `api.warframe.market/v2/item/{slug}/set`, cached for 7 days.
 - Unvaulted relics: `drops.warframestat.us/data/all.json` (DE's official drop tables), cached for 12 h.
+- Permanent weapons: `api.warframestat.us/weapons` (WFCD vault data), cached for 7 days.
 - Varzia stock: `api.warframestat.us/pc/vaultTrader`, cached for 1 h.
 
 Metadata is cached in `~/.cache/wfspread`. You can override that path with `WFSPREAD_CACHE`. Pass `--refresh` to refetch it.
