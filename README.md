@@ -6,10 +6,10 @@ actually farmable right now:
 - **Unvaulted**: primes whose parts drop from relics in the current official drop tables.
 - **Prime Resurgence (PR)**: primes in Varzia's current rotation.
 
-Vaulted primes are skipped. Unvaulted weapons are only shown when they came out in the same Prime Access as an
-unvaulted warframe that hasn't been vaulted yet. That hides permanent-pool weapons like Braton, Lex and Paris Prime. It
-also hides old weapons that came back with a re-released frame, such as Cernos and Venka with Valkyr Prime. Pass
-`--all-weapons` to show every unvaulted weapon. Warframes and weapons are shown in separate tables.
+Vaulted primes are skipped. Unvaulted primes are only shown during their first Prime Access cycle, which covers
+warframes that have never been vaulted and the weapons released with them. That hides the permanent relic pool (Braton,
+Lex, Paris Prime, ...) and the permanently unvaulted Valkyr and Nyx Prime with their weapons. Pass `--all-unvaulted` to
+show everything that drops. Warframes and weapons are shown in separate tables.
 
 ## Run
 

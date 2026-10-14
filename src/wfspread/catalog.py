@@ -4,10 +4,10 @@
   in the official drop tables (missions, bounties, etc.).
 - Prime Resurgence: a prime sold by Varzia in the current rotation (worldstate).
 
-Unvaulted weapons are only kept when they were released in the same Prime Access as
-an unvaulted warframe that is still in its first cycle (never vaulted). That drops the
-permanent relic pool (Braton, Lex, Paris Prime, ...) and old weapons that came back
-alongside re-released frames (e.g. Cernos/Venka with Valkyr Prime).
+Unvaulted primes are only kept while in their first Prime Access cycle: warframes that
+have never been vaulted, and weapons released alongside one of those warframes. That
+drops the permanent relic pool (Braton, Lex, Paris Prime, ...) and the permanently
+unvaulted Valkyr/Nyx Prime along with their weapons.
 """
 
 from __future__ import annotations
@@ -59,7 +59,7 @@ class Catalog:
     targets: list[Target]
     pr_expiry: datetime | None
     drops_updated: datetime | None
-    hidden_weapons: list[str] = field(default_factory=list)
+    hidden: list[str] = field(default_factory=list)
 
 
 def _name(item: dict) -> str:
@@ -120,8 +120,15 @@ def release_info(http: Http) -> dict[str, dict]:
 
 
 def _fresh(info: dict | None) -> bool:
-    """In its first Prime Access cycle: has never been vaulted."""
-    return bool(info) and not info.get("vaulted") and not info.get("vaultDate")
+    """In its first Prime Access cycle: never vaulted and released within the last 3 years.
+
+    The age check guards against stale vault data for items that were vaulted and then
+    permanently unvaulted (Valkyr/Nyx Prime).
+    """
+    if not info or info.get("vaulted") or info.get("vaultDate"):
+        return False
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=3 * 365)).date().isoformat()
+    return (info.get("releaseDate") or "") >= cutoff
 
 
 def set_parts(http: Http, set_slug: str) -> list[Part]:
@@ -133,7 +140,7 @@ def set_parts(http: Http, set_slug: str) -> list[Part]:
     ]
 
 
-def build_catalog(http: Http, all_weapons: bool = False) -> Catalog:
+def build_catalog(http: Http, all_unvaulted: bool = False) -> Catalog:
     items = http.cached_json("market_items", f"{MARKET}/items", ttl=DAY)["data"]
     sets_by_name = {_name(i): i for i in items if "set" in i["tags"] and "prime" in i["tags"]}
     sets_by_ref = {i["gameRef"]: i for i in sets_by_name.values()}
@@ -159,7 +166,7 @@ def build_catalog(http: Http, all_weapons: bool = False) -> Catalog:
             add(item, RESURGENCE)
 
     hidden: list[str] = []
-    if not all_weapons:
+    if not all_unvaulted:
         info = release_info(http)
 
         def base(t: Target) -> str:
@@ -171,10 +178,11 @@ def build_catalog(http: Http, all_weapons: bool = False) -> Catalog:
             if t.kind == "frame" and UNVAULTED in t.sources and _fresh(info.get(base(t)))
         }
         for slug, t in list(targets.items()):
-            if t.kind != "weapon" or t.sources != {UNVAULTED}:
-                continue
-            w = info.get(base(t))
-            if not (_fresh(w) and w.get("releaseDate") in fresh_frame_dates):
+            if t.sources != {UNVAULTED}:
+                continue  # Prime Resurgence items always stay
+            i = info.get(base(t))
+            keep = _fresh(i) and (t.kind == "frame" or i.get("releaseDate") in fresh_frame_dates)
+            if not keep:
                 hidden.append(base(t))
                 del targets[slug]
 
@@ -184,4 +192,4 @@ def build_catalog(http: Http, all_weapons: bool = False) -> Catalog:
             t.partial = any(p.name not in dropping_parts for p in t.parts)
 
     ordered = sorted(targets.values(), key=lambda t: (t.kind != "frame", t.name))
-    return Catalog(targets=ordered, pr_expiry=pr_expiry, drops_updated=drops_updated, hidden_weapons=sorted(hidden))
+    return Catalog(targets=ordered, pr_expiry=pr_expiry, drops_updated=drops_updated, hidden=sorted(hidden))
