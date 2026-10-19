@@ -418,9 +418,41 @@ function query(tab) {
   if (prefs[tab].all) p.set("all", "1");
   return p.toString();
 }
-function load(tab) {
+// ---------- stored data ----------
+// Fetched responses are kept in this browser and reused for up to a day, so opening the page doesn't hit
+// warframe.market again; Refresh always fetches. Storage can be missing or full: then we just fetch.
+const STORE_DATA = "wfsa-data:";
+const MAX_AGE_MS = 24 * 3600e3;
+const ageMs = body => Date.now() - Date.parse(body.generated_at);
+function readStored(key) {
+  try {
+    const body = JSON.parse(localStorage.getItem(STORE_DATA + key));
+    return body && ageMs(body) < MAX_AGE_MS ? body : null;
+  } catch { return null; }
+}
+function writeStored(key, body) {
+  try {
+    // Drop entries older than a day first so storage doesn't fill up with old platform/depth combinations.
+    for (const k of Object.keys(localStorage)) {
+      if (!k.startsWith(STORE_DATA)) continue;
+      try { if (ageMs(JSON.parse(localStorage.getItem(k))) >= MAX_AGE_MS) localStorage.removeItem(k); }
+      catch { localStorage.removeItem(k); }
+    }
+    localStorage.setItem(STORE_DATA + key, JSON.stringify(body));
+  } catch {}
+}
+
+// force: skip stored data and fetch (Refresh). Otherwise a stored copy under a day old is used as is.
+function load(tab, force = false) {
   const q = query(tab);
-  if (status[tab] === "loading" && started[tab]?.q === q) return queue;
+  if (status[tab] === "loading" && started[tab]?.q === q && !force) return queue;
+  const stored = force ? null : readStored(`${tab}?${q}`);
+  if (stored) {
+    data[tab] = stored; status[tab] = "ready"; delete errors[tab]; started[tab] = { q, t: Date.now() };
+    updateCounts(); updateBusy();
+    if (tab === prefs.tab) render();
+    return queue;
+  }
   status[tab] = "loading"; started[tab] = { q, t: Date.now() };
   updateBusy();
   if (tab === prefs.tab) render();
@@ -430,6 +462,7 @@ function load(tab) {
       const res = await fetch(`/api/${tab}?${q}`);
       const body = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
       if (!res.ok || body.error) throw new Error(body.error || `HTTP ${res.status}`);
+      writeStored(`${tab}?${q}`, body);
       if (started[tab].q !== q) return;
       data[tab] = body; status[tab] = "ready"; delete errors[tab];
     } catch (e) {
@@ -518,13 +551,22 @@ function setBadges(s) {
 
 // ---------- vaulted sets ----------
 // 100+ sets with their parts is too much for one request, so they arrive a page at a time (about a minute
-// each when the CDN has no copy; pages are cached for an hour). Rows stay until platform or depth change.
+// each when the CDN has no copy; pages are cached for an hour). Rows stay until platform or depth change,
+// and a complete list is stored in the browser like the other tabs. restart: fetch again (Refresh).
 const vaulted = { sets: [], page: 0, pages: null, total: null, loading: false, error: null, key: null, generated_at: null };
 function loadVaulted(restart = false) {
   const key = `${prefs.platform}|${prefs.depth}`;
-  if (vaulted.loading && vaulted.key === key) return;
+  if (vaulted.loading && vaulted.key === key && !restart) return;
   if (restart || vaulted.key !== key) {
     Object.assign(vaulted, { sets: [], page: 0, pages: null, total: null, error: null, key, generated_at: null });
+    const stored = restart ? null : readStored(`vaulted?${key}`);
+    if (stored) {
+      Object.assign(vaulted, { sets: stored.sets, page: stored.pages, pages: stored.pages, total: stored.total,
+        generated_at: stored.generated_at, loading: false });
+      updateBusy();
+      if (prefs.tab === "sets") render();
+      return;
+    }
   }
   if (vaulted.pages != null && vaulted.page >= vaulted.pages) return;
   Object.assign(vaulted, { loading: true, error: null, started: Date.now() });
@@ -542,7 +584,11 @@ function loadVaulted(restart = false) {
         vaulted.sets.push(...body.sets);
         Object.assign(vaulted, { pages: body.pages, total: body.total, page: vaulted.page + 1 });
         if (!vaulted.generated_at || body.generated_at < vaulted.generated_at) vaulted.generated_at = body.generated_at;
-        if (vaulted.page < vaulted.pages) next(); else vaulted.loading = false;
+        if (vaulted.page < vaulted.pages) next();
+        else {
+          vaulted.loading = false;
+          writeStored(`vaulted?${key}`, { generated_at: vaulted.generated_at, pages: vaulted.pages, total: vaulted.total, sets: vaulted.sets });
+        }
       } catch (e) {
         if (vaulted.key !== key) return;
         Object.assign(vaulted, { loading: false, error: e.message });
@@ -563,7 +609,7 @@ function vaultedStatus() {
   const page = `page ${vaulted.page + 1} of ${vaulted.pages ?? "?"}`;
   return win("Loading vaulted sets", `<div class="state" style="padding:20px 16px">${done ? "" : '<div class="spinner"></div>'}
     <div class="big">${done} / ${total} sets · ${page}</div>
-    <div>Each page of 20 sets takes about a minute the first time each hour; after that it's cached. Rows appear as pages arrive.</div></div>`);
+    <div>Each page of 20 sets takes about a minute when it isn't cached. Rows appear as pages arrive, and the full list is then saved in this browser for a day.</div></div>`);
 }
 function setRow(s) {
   const open = openSets.has(s.slug);
@@ -886,7 +932,7 @@ function renderState(tab) {
   const expect = tab === "sets" ? "up to about 2 minutes" : "about 20 seconds";
   return win("Establishing link", `<div class="state"><div class="spinner"></div>
     <div class="big">Fetching live prices from warframe.market… <span id="elapsed">0s</span></div>
-    <div>warframe.market allows ~3 requests/second, so a fresh fetch takes ${expect}. Results are then cached for 10 minutes.</div></div>`);
+    <div>warframe.market allows ~3 requests/second, so a fresh fetch takes ${expect}. Results are then saved in this browser and reused for up to a day.</div></div>`);
 }
 
 // ---------- render ----------
@@ -911,15 +957,25 @@ function render() {
 }
 function renderFooter() {
   const d = data[prefs.tab];
-  $("#footer").innerHTML = `${d ? `Data from ${new Date(d.generated_at).toLocaleTimeString()} (${d.platform}, ${d.depth > 1 ? `avg of top ${d.depth}` : "best order"}), cached for 10 minutes. ` : ""}
+  $("#footer").innerHTML = `${d ? `Data from ${new Date(d.generated_at).toLocaleTimeString()} (${d.platform}, ${d.depth > 1 ? `avg of top ${d.depth}` : "best order"}). Data is saved in this browser and reused for up to a day; Refresh fetches live prices. ` : ""}
     Prices: top 5 buy/sell orders from players in game, <code>api.warframe.market</code>. Volume: closed-trade statistics.
     Relics: DE's drop tables via <code>drops.warframestat.us</code>. Varzia and Baro: <code>api.warframestat.us</code> and the Warframe wiki.
     Backdrop: Warframe's Corpus menu background. Fan-made, not affiliated with Digital Extremes.
     <a href="https://github.com/LucasRibeiroCaetano/warframe-set-arbitrage">Source</a>`;
   renderSync();
 }
-// The sync bar fills up as the cached data ages towards the 10-minute refresh.
-const CACHE_MS = 10 * 60 * 1000;
+// The sync bar fills up as the data on screen ages towards a day, when the page would fetch it again by itself.
+function ageLabel(iso) {
+  const d = new Date(iso), mins = Math.round((Date.now() - d) / 60000);
+  const time = d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  const day = d.toDateString() === new Date().toDateString() ? "" : "YESTERDAY ";
+  const ago = mins < 1 ? "JUST NOW" : mins < 60 ? `${mins} MIN AGO` : `${Math.floor(mins / 60)}H ${mins % 60}M AGO`;
+  return { time: day + time, ago, fresh: mins < 10 };
+}
+function syncText(iso, what = "") {
+  const a = ageLabel(iso);
+  return a.fresh ? `${what}SYNCED ${a.time} · LIVE PRICES` : `${what}SAVED ${a.time} (${a.ago}) · PRESS REFRESH FOR LIVE PRICES`;
+}
 function renderSync() {
   const tab = prefs.tab, d = data[tab], fill = $("#sync-fill"), text = $("#sync-text");
   if (tab === "sets" && prefs.sets.source === "vaulted" && status.sets !== "loading") {
@@ -927,9 +983,8 @@ function renderSync() {
       fill.style.width = (vaulted.total ? vaulted.sets.length / vaulted.total : 0) * 100 + "%";
       text.textContent = `LOADING VAULTED SETS ${vaulted.sets.length} / ${vaulted.total ?? "…"} · PAGE ${vaulted.page + 1} OF ${vaulted.pages ?? "?"}`;
     } else if (vaulted.generated_at) {
-      const t = new Date(vaulted.generated_at).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
-      fill.style.width = Math.min((Date.now() - Date.parse(vaulted.generated_at)) / 3600e3, 1) * 100 + "%";
-      text.textContent = `${vaulted.sets.length} VAULTED SETS · SYNCED ${t} · CACHED FOR 1 HOUR`;
+      fill.style.width = Math.min((Date.now() - Date.parse(vaulted.generated_at)) / MAX_AGE_MS, 1) * 100 + "%";
+      text.textContent = syncText(vaulted.generated_at, `${vaulted.sets.length} VAULTED SETS · `);
     } else {
       fill.style.width = "0";
       text.textContent = vaulted.error ? "VAULTED LINK ERROR" : "VAULTED SETS";
@@ -943,13 +998,8 @@ function renderSync() {
     return;
   }
   if (!d) { fill.style.width = "0"; text.textContent = status[tab] === "error" ? "LINK ERROR" : "CONNECTING…"; return; }
-  const age = Date.now() - Date.parse(d.generated_at);
-  const left = Math.max(CACHE_MS - age, 0);
-  const t = new Date(d.generated_at).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
-  fill.style.width = Math.min(age / CACHE_MS, 1) * 100 + "%";
-  text.textContent = left
-    ? `SYNCED ${t} · NEXT REFRESH IN ${Math.floor(left / 60000)}:${String(Math.floor(left / 1000) % 60).padStart(2, "0")}`
-    : `SYNCED ${t} · NEWER PRICES AVAILABLE, PRESS REFRESH`;
+  fill.style.width = Math.min(ageMs(d) / MAX_AGE_MS, 1) * 100 + "%";
+  text.textContent = syncText(d.generated_at);
 }
 
 // ---------- events ----------
@@ -958,6 +1008,7 @@ document.addEventListener("click", e => {
   if (tabBtn) {
     prefs.tab = tabBtn.dataset.tab; savePrefs(); history.replaceState(null, "", "#" + prefs.tab);
     if (!data[prefs.tab] && status[prefs.tab] !== "loading") load(prefs.tab);
+    if (prefs.tab === "sets" && prefs.sets.source === "vaulted") loadVaulted();
     render(); return;
   }
   const th = e.target.closest("th[data-sort]");
@@ -1004,13 +1055,14 @@ document.addEventListener("change", e => {
   if (id === "all-mods") { prefs.mods.all = e.target.checked; savePrefs(); load("mods"); }
   if (id === "platform" || id === "depth") {
     prefs[id] = e.target.value; savePrefs();
+    // Only the visible tab loads now (from storage when it can); the other loads when it's opened.
     data.sets = data.mods = null; updateCounts();
-    load(prefs.tab).then(() => load(prefs.tab === "sets" ? "mods" : "sets"));
-    if (prefs.sets.source === "vaulted") loadVaulted(true);
+    load(prefs.tab);
+    if (prefs.tab === "sets" && prefs.sets.source === "vaulted") loadVaulted();
   }
 });
 $("#refresh").addEventListener("click", () => {
-  load(prefs.tab);
+  load(prefs.tab, true);
   if (prefs.tab === "sets" && prefs.sets.source === "vaulted") loadVaulted(true);
 });
 
@@ -1113,8 +1165,9 @@ $("#depth").value = prefs.depth;
 document.querySelectorAll(".hfield select").forEach(holoSelect);
 render();
 // Load the visible tab first, then prefetch the other one.
-load(prefs.tab).then(() => load(prefs.tab === "sets" ? "mods" : "sets"));
-if (prefs.sets.source === "vaulted") loadVaulted();
+// Only the visible tab: from this browser's stored copy when it's under a day old, otherwise fetched.
+load(prefs.tab);
+if (prefs.tab === "sets" && prefs.sets.source === "vaulted") loadVaulted();
 setInterval(renderSync, 1000);
 </script>
 </body>
