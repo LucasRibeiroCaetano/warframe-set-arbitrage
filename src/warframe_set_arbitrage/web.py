@@ -119,6 +119,8 @@ def mods_payload(query: dict[str, list[str]]) -> dict:
             "activation": _iso(baro.activation),
             "expiry": _iso(baro.expiry),
             "primed_in_stock": sorted(i for i in baro.items if i.startswith("Primed ")),
+            "last_visit": baro.last_visit,
+            "last_visit_primed": sorted(baro.last_visit_items),
         },
         "mods": [_mod(s) for s in spreads],
     }
@@ -137,6 +139,9 @@ def _mod(s: ModSpread) -> dict:
         "max_rank": m.max_rank,
         "rarity": m.rarity,
         "in_baro": m.in_baro,
+        "in_last_baro": m.in_last_baro,
+        "last_baro": m.last_baro,
+        "baro_visits": m.baro_visits,
         "endo_to_max": m.endo_to_max,
         "credits_to_max": m.credits_to_max,
         "r0": _quote(s.r0),
@@ -178,8 +183,10 @@ class ApiHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(data)))
         if cache:
-            # The CDN serves a stale copy while it refetches in the background.
-            self.send_header("Cache-Control", f"public, s-maxage={CACHE_SECONDS}, stale-while-revalidate=3600")
+            # Only Vercel's CDN caches (serving a stale copy while it refetches in the background);
+            # browsers always ask it, so they never show a copy older than the CDN's.
+            self.send_header("Vercel-CDN-Cache-Control", f"max-age={CACHE_SECONDS}, stale-while-revalidate=3600")
+            self.send_header("Cache-Control", "no-cache")
         else:
             self.send_header("Cache-Control", "no-store")
         self.end_headers()

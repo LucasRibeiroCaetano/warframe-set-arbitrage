@@ -143,7 +143,11 @@ nav.tabs .count { color: var(--muted); font-weight: 400; margin-left: 4px; }
 .seg { display: inline-flex; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 2px; }
 .seg button { background: none; border: 0; border-radius: 6px; padding: 5px 10px; cursor: pointer; color: var(--ink-2); }
 .seg button[aria-pressed="true"] { background: var(--accent-wash); color: var(--ink); font-weight: 500; }
+.seg button:disabled { color: var(--muted); cursor: not-allowed; }
+.seg .muted { color: var(--muted); font-weight: 400; }
 .check { display: inline-flex; gap: 6px; align-items: center; color: var(--ink-2); cursor: pointer; }
+.check.disabled { color: var(--muted); cursor: not-allowed; }
+.check .muted { color: var(--muted); }
 
 section.group { margin-bottom: 24px; }
 section.group h2 { font-size: 15px; margin: 0 0 8px; font-weight: 600; }
@@ -292,8 +296,10 @@ function savePrefs() { try { localStorage.setItem(STORE_KEY, JSON.stringify(pref
 const prefs = Object.assign({
   tab: "sets", platform: "pc", depth: "1", theme: null,
   sets: { search: "", source: "all", kind: "all", all: false, sort: "delta_wts", dir: -1 },
-  mods: { search: "", baroOnly: false, all: false, sort: "dip", dir: 1 },
+  mods: { search: "", baro: "all", all: false, sort: "dip", dir: 1 },
 }, loadPrefs());
+// Saved prefs from before the Baro filter had three states.
+if (!["all", "now", "last"].includes(prefs.mods.baro)) prefs.mods.baro = "all";
 if (location.hash === "#mods" || location.hash === "#sets") prefs.tab = location.hash.slice(1);
 
 // ---------- formatting ----------
@@ -473,6 +479,7 @@ function renderSets() {
 const modCols = [
   { key: "name", label: "Mod", sort: r => r.name },
   { key: "trend", label: "Rank 0, 90 days", nosort: true },
+  { key: "last_baro", label: "Last<br>Baro", title: "When Baro last brought it (from the wiki's visit history)" },
   { key: "r0_wts", label: "R0<br>WTS", sort: r => r.r0.wts, title: "Cheapest in-game seller at rank 0" },
   { key: "r0_wtb", label: "R0<br>WTB", sort: r => r.r0.wtb, title: "Highest in-game buyer at rank 0" },
   { key: "median", label: "R0 90d<br>median", sort: r => r.r0_stats?.median_90d, title: "Median of daily median rank 0 prices over 90 days" },
@@ -488,7 +495,20 @@ const openMods = new Set();
 
 function modsFiltered() {
   const st = prefs.mods, q = st.search.trim().toLowerCase();
-  return data.mods.mods.filter(m => (!st.baroOnly || m.in_baro) && (!q || m.name.toLowerCase().includes(q)));
+  const f = baroFilter();
+  return data.mods.mods.filter(m =>
+    (f === "all" || (f === "now" ? m.in_baro : m.in_last_baro)) && (!q || m.name.toLowerCase().includes(q)));
+}
+// "Baro now" only applies while he's visiting (his stock is unknown otherwise), "last" once a visit is known.
+function baroFilter() {
+  const b = data.mods.baro, f = prefs.mods.baro;
+  if (f === "now" && b.active) return "now";
+  if (f === "last" && b.last_visit) return "last";
+  return "all";
+}
+function daysAgo(date) {
+  const d = Math.round((Date.now() - Date.parse(date + "T00:00:00Z")) / 864e5);
+  return d < 14 ? `${d}d ago` : d < 120 ? `${Math.round(d / 7)}w ago` : `${Math.round(d / 30)}mo ago`;
 }
 function modRow(m) {
   const open = openMods.has(m.slug);
@@ -496,6 +516,8 @@ function modRow(m) {
   const row = `<tr class="row${open ? " open" : ""}" data-open="mods:${m.slug}" tabindex="0" aria-expanded="${open}">
     <td class="name"><span class="chev">›</span> ${esc(m.name)}${m.in_baro ? '<span class="badge baro" title="In Baro\'s current stock">Baro</span>' : ""}</td>
     <td>${s0 ? sparkline(s0.history, s0.median_90d, m.slug) : '<span class="na">—</span>'}</td>
+    <td title="${m.baro_visits ? `Baro has brought it ${m.baro_visits} times` : ""}">${m.last_baro
+      ? `${shortDate(m.last_baro)} <span class="dim">${daysAgo(m.last_baro)}</span>` : '<span class="na">—</span>'}</td>
     <td>${fmt(m.r0.wts)}</td><td>${fmt(m.r0.wtb)}</td><td class="dim">${fmt(s0?.median_90d)}</td>
     <td>${signed(m.dip == null ? null : Math.round(m.dip), "%", true)}</td><td>${vol(s0?.vol_48h)}</td>
     <td>${fmt(m.rmax.wts)}</td><td>${fmt(m.rmax.wtb)}</td><td>${vol(sm?.vol_48h)}</td>
@@ -514,7 +536,7 @@ function modRow(m) {
     ${s0 && sm ? historyChart(m) : ""}${facts}</div></td></tr>`;
 }
 function renderMods() {
-  const d = data.mods, st = prefs.mods, b = d.baro;
+  const d = data.mods, st = prefs.mods, b = d.baro, f = baroFilter();
   const rows = sortRows(modsFiltered(), modCols, st);
   let banner;
   if (b.active) {
@@ -524,7 +546,9 @@ function renderMods() {
   } else if (b.activation && new Date(b.activation) > Date.now()) {
     banner = `<div class="banner"><span><strong>Baro Ki'Teer</strong> arrives at ${esc(b.location)} ${when(b.activation)}
       <span class="muted">(${rel(b.activation)})</span></span>
-      <span class="muted">Primed mods he brings usually dip in price while he's here.</span></div>`;
+      <span class="muted">${b.last_visit
+        ? `Last visit ${shortDate(b.last_visit)} brought ${b.last_visit_primed.length} primed mods.`
+        : "Primed mods he brings usually dip in price while he's here."}</span></div>`;
   } else {
     banner = `<div class="banner"><span class="muted">Baro's next visit is unknown.</span></div>`;
   }
@@ -537,13 +561,29 @@ function renderMods() {
   </div>`;
   const filters = `<div class="filters">
     <input type="search" id="search-mods" placeholder="Filter mods…" value="${esc(st.search)}" aria-label="Filter mods by name">
-    <label class="check"><input type="checkbox" id="baro-only" ${st.baroOnly ? "checked" : ""}> Only Baro's stock</label>
+    <div class="seg" role="group" aria-label="Baro filter">
+      <button data-seg="mods:baro:all" aria-pressed="${f === "all"}">All mods</button>
+      <button data-seg="mods:baro:now" aria-pressed="${f === "now"}" ${b.active ? "title=\"Baro's current stock\""
+        : `disabled title="Baro's stock is only known while he's visiting"`}>Baro now${b.active || !b.activation ? "" : ` <span class="muted">${rel(b.activation)}</span>`}</button>
+      <button data-seg="mods:baro:last" aria-pressed="${f === "last"}" ${b.last_visit
+        ? `title="Primed mods Baro brought on his last visit"` : "disabled"}>Last Baro${b.last_visit ? ` <span class="muted">${shortDate(b.last_visit)}</span>` : ""}</button>
+    </div>
     <label class="check" title="Every primed mod instead of the steady-demand watchlist (refetches)">
       <input type="checkbox" id="all-mods" ${st.all ? "checked" : ""}> All primed mods</label>
   </div>`;
+  let empty = emptyFilter();
+  const listed = f === "now" ? b.primed_in_stock : b.last_visit_primed;
+  if (f !== "all" && !d.mods.some(m => f === "now" ? m.in_baro : m.in_last_baro)) {
+    const visit = f === "now" ? "this visit" : `on ${shortDate(b.last_visit)}`;
+    const why = listed.length
+      ? `He brought ${esc(listed.join(", "))}, which warframe.market doesn't list as tradable.`
+      : `Baro didn't bring any primed mods ${visit}.`;
+    empty = `<div class="table-wrap"><div class="state"><div class="big">No tradable primed mods ${visit}</div>
+      <div>${why} Pick “All mods” to see the watchlist.</div></div></div>`;
+  }
   const table = rows.length
     ? `<div class="table-wrap"><table>${thead(modCols, st, "mods")}<tbody>${rows.map(modRow).join("")}</tbody></table></div>`
-    : emptyFilter();
+    : empty;
   return banner + tiles + help("mods") + filters + table;
 }
 
@@ -658,7 +698,8 @@ const HELP = {
     ["Dip", "Live rank 0 WTS vs the 90-day median of daily medians. Negative means cheaper than usual: buy during Baro's visit, sell a couple of months after he leaves."],
     ["Max premium", "Max rank WTS − rank 0 WTS: what maxing adds when you list it."],
     ["p / 1k endo", "Max premium per 1,000 endo. A primed (legendary) mod takes 40,920 endo and 1,976,436 credits to max; credits aren't counted."],
-    ["Watchlist", "Primed mods with steady demand (Continuity, Flow, Reach, Fever Strike, Target Cracker, …) plus anything Baro is selling right now."],
+    ["Watchlist", "Primed mods with steady demand (Continuity, Flow, Reach, Fever Strike, Target Cracker, …) plus anything Baro is selling now or brought on his last visit."],
+    ["Last Baro", "When Baro last brought the mod, from the wiki's visit history (hover for how many times). The Last Baro filter shows what he brought on his most recent visit: those are the dips to buy into."],
     ["Sparkline", "Daily median rank 0 price over 90 days. The dashed line is the 90-day median; click a row for rank 0 vs max rank."],
   ],
 };
@@ -743,7 +784,6 @@ document.addEventListener("input", e => {
 });
 document.addEventListener("change", e => {
   const id = e.target.id;
-  if (id === "baro-only") { prefs.mods.baroOnly = e.target.checked; savePrefs(); render(); }
   if (id === "all-sets") { prefs.sets.all = e.target.checked; savePrefs(); load("sets"); }
   if (id === "all-mods") { prefs.mods.all = e.target.checked; savePrefs(); load("mods"); }
   if (id === "platform" || id === "depth") {

@@ -73,6 +73,7 @@ Reach, Fever Strike, Target Cracker, Pressure Point, ...) plus any primed mod in
 ```bash
 uv run wfspread mods                   # watchlist, deepest dip first
 uv run wfspread mods --all             # every primed mod
+uv run wfspread mods --last-baro       # only what Baro brought on his last visit
 uv run wfspread mods --sort endo       # best max-rank premium per endo
 uv run wfspread mods -f flow --csv mods.csv
 ```
@@ -80,6 +81,7 @@ uv run wfspread mods -f flow --csv mods.csv
 | Column | Meaning |
 | --- | --- |
 | Baro | `here` = in Baro's current stock |
+| Last Baro | When Baro last brought the mod, from the wiki's visit history |
 | R0 WTS / WTB | Cheapest in-game seller / highest in-game buyer at rank 0 |
 | R0 90d median | Median of the daily median rank 0 prices over 90 days: the usual price |
 | Dip | R0 WTS vs the 90d median. **−** → cheaper than usual, which is the buy signal |
@@ -100,6 +102,7 @@ The heading line says when Baro arrives or leaves. A full run is 2 order request
   to frames by release date.
 - Varzia stock: `api.warframestat.us/pc/vaultTrader`, cached for 1 h.
 - Baro stock and schedule: `api.warframestat.us/pc/voidTrader`, cached for 1 h (refetched once he arrives).
+- Baro's past visits: the wiki's [Module:Baro/data](https://wiki.warframe.com/w/Module:Baro/data) offering dates, cached for 6 h.
 - Mod prices by rank: the same orders endpoint with `?rank=0` / `?rank={maxRank}`, and per-rank series from the stats endpoint.
 
 Metadata is cached in `~/.cache/warframe-set-arbitrage`. You can override that path with `WFSPREAD_CACHE`. Pass `--refresh` to refetch it.

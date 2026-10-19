@@ -48,6 +48,12 @@ class Http:
         self._last_call[host] = time.monotonic()
 
     def get_json(self, url: str):
+        return self._get(url).json()
+
+    def get_text(self, url: str) -> str:
+        return self._get(url).text
+
+    def _get(self, url: str) -> httpx.Response:
         host = urlsplit(url).hostname or ""
         delay = 1.0
         for attempt in range(6):
@@ -67,24 +73,25 @@ class Http:
                 delay *= 2
                 continue
             resp.raise_for_status()
-            return resp.json()
+            return resp
         raise RuntimeError(f"unreachable: {url}")
 
     def is_cached(self, key: str, ttl: float) -> bool:
         path = CACHE_DIR / f"{key}.json"
         return not self.refresh and path.exists() and time.time() - path.stat().st_mtime < ttl
 
-    def cached_json(self, key: str, url: str, ttl: float, transform=None):
+    def cached_json(self, key: str, url: str, ttl: float, transform=None, text: bool = False):
         """Fetch JSON, reusing a cached copy younger than `ttl` seconds.
 
-        `transform` reduces the response before it is cached and returned.
+        `transform` reduces the response before it is cached and returned. With `text`,
+        the response is read as plain text (and `transform` should turn it into JSON data).
         If the fetch fails and a stale copy exists, the stale copy is returned.
         """
         path = CACHE_DIR / f"{key}.json"
         if self.is_cached(key, ttl):
             return json.loads(path.read_text(encoding="utf-8"))
         try:
-            data = self.get_json(url)
+            data = self.get_text(url) if text else self.get_json(url)
             if transform:
                 data = transform(data)
         except (httpx.HTTPError, ValueError):

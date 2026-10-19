@@ -7,7 +7,8 @@ rank 0 with max rank (whether maxing it is worth the endo and credits).
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import re
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from statistics import median
 
@@ -50,6 +51,9 @@ class PrimedMod:
     max_rank: int
     rarity: str
     in_baro: bool = False
+    in_last_baro: bool = False  # brought on his most recent finished visit
+    last_baro: str | None = None  # date Baro last brought it
+    baro_visits: int = 0  # times Baro has brought it
 
     @property
     def endo_to_max(self) -> int:
@@ -67,6 +71,10 @@ class Baro:
     activation: datetime | None
     expiry: datetime | None
     items: set[str]  # names in his current stock
+    # From the wiki's offering history: primed mod name -> dates Baro brought it.
+    offerings: dict[str, list[str]] = field(default_factory=dict)
+    last_visit: str | None = None  # start date of his most recent finished visit
+    last_visit_items: set[str] = field(default_factory=set)  # primed mods he brought then
 
 
 def baro_status(http: Http) -> Baro:
@@ -74,7 +82,45 @@ def baro_status(http: Http) -> Baro:
     if baro.active and not baro.items:
         # Cached from before he arrived: his stock is only listed once he's here.
         baro = _baro(http.cached_json("baro", BARO, ttl=0))
+    history = baro_history(http)
+    baro.offerings = history["primed"]
+    # While he's here, "last visit" means the one before this one.
+    if baro.active and baro.activation:
+        cutoff = baro.activation.date().isoformat()
+        past = [d for d in history["visits"] if d < cutoff]
+    else:
+        past = [d for d in history["visits"] if d <= _today()]
+    if past:
+        baro.last_visit = past[-1]
+        baro.last_visit_items = {name for name, dates in baro.offerings.items() if baro.last_visit in dates}
     return baro
+
+
+# The wiki keeps every item's Baro offering dates in a Lua data module.
+BARO_HISTORY = "https://wiki.warframe.com/w/Module:Baro/data?action=raw"
+_WIKI_ITEM = re.compile(r'^\t\t\["(?P<name>[^"]+)"\] = \{\n(?P<body>.*?)^\t\t\},?$', re.M | re.S)
+# OfferingDates (cross-platform, 2023+) and PcOfferingDates (older); console dates lagged PC.
+_WIKI_DATES = re.compile(r"^\t\t\t(?:Pc)?OfferingDates = \{(.*?)\}", re.M | re.S)
+_DATE = re.compile(r'"(\d{4}-\d{2}-\d{2})"')
+
+
+def _reduce_baro_history(lua: str) -> dict:
+    primed: dict[str, list[str]] = {}
+    visits: set[str] = set()
+    for m in _WIKI_ITEM.finditer(lua):
+        dates = sorted({d for block in _WIKI_DATES.findall(m["body"]) for d in _DATE.findall(block)})
+        visits.update(dates)
+        if m["name"].startswith("Primed ") and dates:
+            primed[m["name"]] = dates
+    return {"primed": primed, "visits": sorted(visits)}
+
+
+def baro_history(http: Http) -> dict:
+    """Past Baro visits from the wiki. Empty if the wiki can't be reached and nothing is cached."""
+    try:
+        return http.cached_json("baro_history", BARO_HISTORY, ttl=6 * HOUR, transform=_reduce_baro_history, text=True)
+    except Exception:
+        return {"primed": {}, "visits": []}
 
 
 def _baro(trader: dict) -> Baro:
@@ -94,17 +140,33 @@ def _rarity(tags: list[str]) -> str:
 
 
 def primed_mods(http: Http, baro: Baro, all_mods: bool = False) -> list[PrimedMod]:
-    """The watchlist (or every primed mod), plus any primed mod Baro is selling right now."""
+    """The watchlist (or every primed mod), plus any primed mod Baro is selling now or brought last visit."""
     items = http.cached_json("market_items", f"{MARKET}/items", ttl=DAY)["data"]
+    # A visit that's on now isn't "last" yet, though the wiki may already list it.
+    current = baro.activation.date().isoformat() if baro.active and baro.activation else None
+    today = _today()
+    # Names are matched case-insensitively: the market writes "Bane Of", the game and wiki "Bane of".
+    stock = {n.lower() for n in baro.items}
+    last_visit = {n.lower() for n in baro.last_visit_items}
+    offerings = {n.lower(): dates for n, dates in baro.offerings.items()}
     mods = []
     for i in items:
         name = _name(i)
         if not name.startswith("Primed ") or "mod" not in i["tags"] or not i.get("maxRank"):
             continue
-        in_baro = name in baro.items
-        if all_mods or in_baro or i["slug"] in WATCHLIST:
-            mods.append(PrimedMod(i["slug"], name, i["maxRank"], _rarity(i["tags"]), in_baro))
+        key = name.lower()
+        in_baro, in_last = key in stock, key in last_visit
+        if all_mods or in_baro or in_last or i["slug"] in WATCHLIST:
+            dates = [d for d in offerings.get(key, []) if d != current and d <= today]
+            mods.append(PrimedMod(
+                i["slug"], name, i["maxRank"], _rarity(i["tags"]), in_baro, in_last,
+                last_baro=dates[-1] if dates else None, baro_visits=len(dates),
+            ))
     return sorted(mods, key=lambda m: m.name)
+
+
+def _today() -> str:
+    return datetime.now(timezone.utc).date().isoformat()
 
 
 @dataclass

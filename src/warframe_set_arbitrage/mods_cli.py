@@ -29,6 +29,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     p.add_argument("--all", dest="all_mods", action="store_true",
                    help="every primed mod, not just the steady-demand watchlist")
     p.add_argument("-f", "--filter", help="only mods whose name contains this text")
+    p.add_argument("--last-baro", action="store_true", help="only primed mods Baro brought on his last visit")
     p.add_argument("--sort", choices=["name", *SORTS], default="dip")
     p.add_argument("--depth", type=int, default=1, help="average the best N orders per side (default 1)")
     p.add_argument("--no-volume", action="store_true", help="skip trade stats (no dip or volume columns)")
@@ -49,6 +50,8 @@ def main(argv: list[str]) -> int:
             mods = primed_mods(http, baro, all_mods=args.all_mods)
         if args.filter:
             mods = [m for m in mods if args.filter.lower() in m.name.lower()]
+        if args.last_baro:
+            mods = [m for m in mods if m.in_last_baro]
         if not mods:
             console.print("[yellow]No primed mods match those filters.[/]")
             return 1
@@ -82,6 +85,7 @@ def mod_table(spreads: list[ModSpread], with_stats: bool) -> Table:
     table = Table(header_style="bold")
     table.add_column("Mod", min_width=18)
     table.add_column("Baro")
+    table.add_column("Last\nBaro", style="dim")
     table.add_column("R0 WTS", justify="right")
     table.add_column("R0 WTB", justify="right")
     if with_stats:
@@ -100,6 +104,7 @@ def mod_table(spreads: list[ModSpread], with_stats: bool) -> Table:
         row = [
             s.mod.name.removeprefix("Primed "),
             "[yellow]here[/]" if s.mod.in_baro else "",
+            s.mod.last_baro or "—",
             fmt(s.r0.wts),
             fmt(s.r0.wtb),
         ]
@@ -128,6 +133,13 @@ def baro_line(baro: Baro) -> str:
     return "Baro's next visit is unknown."
 
 
+def last_visit_line(baro: Baro) -> str | None:
+    if not baro.last_visit:
+        return None
+    primed = sorted(baro.last_visit_items)
+    return f"Baro's last visit ({baro.last_visit}) brought: {', '.join(primed) if primed else 'no primed mods'}."
+
+
 def render(console: Console, spreads: list[ModSpread], baro: Baro, args: argparse.Namespace) -> None:
     now = datetime.now().astimezone()
     heading = f"Primed mods · {now:%Y-%m-%d %H:%M} · {args.platform}"
@@ -135,6 +147,8 @@ def render(console: Console, spreads: list[ModSpread], baro: Baro, args: argpars
         heading += f" · avg of top {args.depth}"
     console.print(Rule(heading, style="bold"))
     console.print(baro_line(baro))
+    if line := last_visit_line(baro):
+        console.print(f"[dim]{line}[/]")
     console.print()
     with_stats = not args.no_volume
     console.print(mod_table(spreads, with_stats))
@@ -159,12 +173,12 @@ def render(console: Console, spreads: list[ModSpread], baro: Baro, args: argpars
 def write_csv(path: str, spreads: list[ModSpread]) -> None:
     with open(path, "w", newline="", encoding="utf-8") as fh:
         w = csv.writer(fh)
-        w.writerow(["mod", "max_rank", "in_baro", "r0_wts", "r0_wtb", "r0_median_90d", "r0_low_90d", "r0_high_90d",
+        w.writerow(["mod", "max_rank", "in_baro", "last_baro", "baro_visits", "r0_wts", "r0_wtb", "r0_median_90d", "r0_low_90d", "r0_high_90d",
                     "dip_pct", "r0_vol_48h", "max_wts", "max_wtb", "max_vol_48h", "premium", "endo_to_max",
                     "credits_to_max", "plat_per_1k_endo"])
         for s in spreads:
             r0, rmax = s.rank_stats(0), s.rank_stats(s.mod.max_rank)
-            w.writerow([s.mod.name, s.mod.max_rank, s.mod.in_baro, s.r0.wts, s.r0.wtb, r0 and r0.median_90d,
+            w.writerow([s.mod.name, s.mod.max_rank, s.mod.in_baro, s.mod.last_baro, s.mod.baro_visits, s.r0.wts, s.r0.wtb, r0 and r0.median_90d,
                         r0 and r0.low_90d, r0 and r0.high_90d, s.dip, r0 and r0.vol_48h, s.rmax.wts, s.rmax.wtb,
                         rmax and rmax.vol_48h, s.premium, s.mod.endo_to_max, s.mod.credits_to_max,
                         s.plat_per_kendo])
