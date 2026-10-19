@@ -52,7 +52,13 @@ body {
 button, input, select { font: inherit; color: inherit; }
 a { color: var(--cyan); }
 a:hover { color: #BDF2FD; }
-:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+:focus-visible { outline: 2px solid #8FE9FB; outline-offset: 3px; }
+::selection { background: rgba(69, 212, 240, 0.35); color: #FFFFFF; }
+* { scrollbar-color: #2A7F93 #071820; scrollbar-width: thin; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: #071820; }
+::-webkit-scrollbar-thumb { background: #1B4C5A; border: 2px solid #071820; border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: #2A9DB8; }
 .wrap { max-width: 1360px; margin: 0 auto; padding: 24px 16px 56px; }
 
 /* ---------- header ---------- */
@@ -62,48 +68,104 @@ header.top { display: flex; flex-wrap: wrap; gap: 16px 28px; align-items: center
 .logo-sub { font-family: Orbitron, sans-serif; font-weight: 700; font-size: 12px; letter-spacing: 0.42em; color: #3E8EA2; margin-top: 4px; padding-left: 3px; }
 .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: stretch; }
 
-/* ---------- holo controls ---------- */
+/* ---------- holo controls ----------
+   Every control shares one state language:
+   rest     dark teal fill, dim cyan edge
+   hover    brighter edge + soft outer glow
+   pressed  sunk 1px, inner glow, darker fill
+   selected bright cyan edge, lit gradient, outer glow
+   focus    a cyan ring outside the shape (keyboard only)
+   disabled flat, desaturated, no glow */
+.btn, nav.tabs button, .seg button, .hselect-btn {
+  transition: color 0.15s, background 0.15s, border-color 0.15s, box-shadow 0.15s, transform 0.08s;
+}
 .btn {
   font-weight: 700; font-size: 14px; letter-spacing: 0.1em; text-transform: uppercase; color: #D7F3FA;
   background: linear-gradient(#18566A, #0D3341); border: 2px solid var(--glow); border-radius: 3px;
   box-shadow: 0 0 8px rgba(63, 195, 224, 0.45), inset 0 0 10px rgba(63, 195, 224, 0.2);
   padding: 8px 18px; min-height: 44px; cursor: pointer; display: inline-flex; gap: 8px; align-items: center; justify-content: center;
 }
-.btn:hover { background: linear-gradient(#1D6A80, #10404F); }
-.btn:disabled { opacity: 0.55; cursor: progress; }
-.hfield { display: flex; flex-direction: column; gap: 0; background: #071820; border: 1px solid var(--line);
-  box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.5); padding: 4px 12px 4px; min-width: 120px; }
-.hfield > span { font-size: 11px; letter-spacing: 0.06em; color: #5E97A6; }
-.hfield input, .hfield select { font-size: 15px; color: var(--ink); background: transparent; border: 0; padding: 2px 0; min-height: 26px; }
-.hfield select option { background: #081A23; color: var(--ink); }
-.hfield:focus-within { border-color: var(--glow); }
-.hfield input:focus-visible, .hfield select:focus-visible { outline: none; }
+.btn:hover { color: #FFFFFF; background: linear-gradient(#1F7189, #114556); border-color: #7FE3F7;
+  box-shadow: 0 0 14px rgba(63, 195, 224, 0.75), inset 0 0 12px rgba(63, 195, 224, 0.3); }
+.btn:active { transform: translateY(1px); background: linear-gradient(#0D3341, #0A2833);
+  box-shadow: 0 0 6px rgba(63, 195, 224, 0.4), inset 0 0 14px rgba(63, 195, 224, 0.45); }
+.btn:disabled { color: #5E8590; background: #0A1D25; border-color: #1E4C59; box-shadow: none; cursor: not-allowed; transform: none; }
+.btn.busy { cursor: progress; }
+.btn.busy svg { animation: spin 0.9s linear infinite; }
+
+.hfield { position: relative; display: flex; flex-direction: column; gap: 0; background: #071820; border: 1px solid var(--line);
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.5); padding: 4px 12px 4px; min-width: 120px;
+  transition: border-color 0.15s, box-shadow 0.15s; }
+.hfield > span { font-size: 11px; letter-spacing: 0.06em; color: #5E97A6; transition: color 0.15s; }
+.hfield:hover { border-color: #2A7F93; }
+.hfield:focus-within { border-color: var(--glow); box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.5), 0 0 10px rgba(63, 195, 224, 0.45); }
+.hfield:focus-within > span { color: var(--cyan); }
+.hfield input { font-size: 15px; color: var(--ink); background: transparent; border: 0; padding: 2px 0; min-height: 26px; width: 100%; }
+.hfield input::placeholder { color: #4F7A86; }
+.hfield input:focus-visible { outline: none; }
+.hfield input[type="search"]::-webkit-search-cancel-button {
+  -webkit-appearance: none; appearance: none; width: 16px; height: 16px; cursor: pointer;
+  background: no-repeat center / 16px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2345D4F0' stroke-width='2.6' stroke-linecap='round'%3E%3Cpath d='M6 6l12 12M18 6L6 18'/%3E%3C/svg%3E");
+}
+
+/* Custom dropdown: the native select stays in the DOM (hidden) and keeps the value; this button + listbox drive it. */
+.hfield select[hidden] { display: none; }
+.hselect-btn { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; min-height: 28px;
+  padding: 2px 0; background: transparent; border: 0; color: var(--ink); font-size: 15px; text-align: left; cursor: pointer; }
+.hselect-btn:focus-visible { outline: none; }
+.hselect-btn svg { flex: none; color: var(--cyan); transition: transform 0.15s; }
+.hselect-btn[aria-expanded="true"] svg { transform: rotate(180deg); }
+.hfield.has-select { cursor: pointer; }
+.hselect-list { position: absolute; top: calc(100% + 4px); left: -1px; right: -1px; min-width: 100%; z-index: 30; margin: 0; padding: 4px;
+  list-style: none; background: #071820; border: 1px solid var(--glow);
+  box-shadow: 0 0 14px rgba(63, 195, 224, 0.5), inset 0 0 14px rgba(63, 195, 224, 0.12); }
+.hselect-list[hidden] { display: none; }
+.hselect-list li { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 9px 12px 9px 14px; min-height: 40px; color: #9DCBD7; cursor: pointer; white-space: nowrap; }
+.hselect-list li::before { content: ""; position: absolute; left: 0; top: 6px; bottom: 6px; width: 3px; background: transparent; }
+.hselect-list li.active { color: #FFFFFF; background: #0E2C38; }
+.hselect-list li.active::before { background: var(--cyan); box-shadow: 0 0 6px var(--cyan); }
+.hselect-list li[aria-selected="true"] { color: var(--cyan); font-weight: 600; }
+.hselect-list li[aria-selected="true"]::after { content: ""; width: 8px; height: 8px; transform: rotate(45deg); background: var(--cyan); box-shadow: 0 0 6px var(--cyan); }
 
 nav.tabs { display: flex; flex-wrap: wrap; gap: 10px; margin: 22px 0 14px; }
 nav.tabs button {
   font-weight: 700; font-size: 14px; letter-spacing: 0.1em; text-transform: uppercase; color: #9DCBD7;
   background: #0A2430; border: 2px solid #2A7F93; border-radius: 3px; padding: 8px 18px; min-height: 44px; cursor: pointer;
 }
+nav.tabs button:hover { color: #EAF7FB; border-color: #4FB8D0; box-shadow: 0 0 10px rgba(63, 195, 224, 0.35); }
+nav.tabs button:active { transform: translateY(1px); box-shadow: inset 0 0 12px rgba(63, 195, 224, 0.35); }
 nav.tabs button[aria-selected="true"] {
   color: #D7F3FA; background: linear-gradient(#18566A, #0D3341); border-color: var(--glow);
   box-shadow: 0 0 8px rgba(63, 195, 224, 0.45), inset 0 0 10px rgba(63, 195, 224, 0.2);
 }
+nav.tabs button[aria-selected="true"]:hover { color: #FFFFFF; border-color: #7FE3F7; box-shadow: 0 0 14px rgba(63, 195, 224, 0.75), inset 0 0 12px rgba(63, 195, 224, 0.3); }
 nav.tabs .count { color: var(--muted); font-weight: 500; margin-left: 6px; }
+nav.tabs button[aria-selected="true"] .count { color: #8FD9EA; }
 
 .seg { display: inline-flex; flex-wrap: wrap; gap: 6px; }
 .seg button {
   font-weight: 600; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: #9DCBD7;
   background: #0A2430; border: 1px solid #2A7F93; border-radius: 3px; padding: 8px 12px; min-height: 40px; cursor: pointer;
 }
+.seg button:hover { color: #EAF7FB; border-color: #4FB8D0; box-shadow: 0 0 10px rgba(63, 195, 224, 0.35); }
+.seg button:active { transform: translateY(1px); box-shadow: inset 0 0 12px rgba(63, 195, 224, 0.35); }
 .seg button[aria-pressed="true"] { color: #D7F3FA; background: linear-gradient(#18566A, #0D3341); border-color: var(--glow);
   box-shadow: 0 0 8px rgba(63, 195, 224, 0.4); }
-.seg button:disabled { color: #5E8590; border-color: #1E4C59; background: #0A1D25; cursor: not-allowed; }
+.seg button[aria-pressed="true"]:hover { color: #FFFFFF; border-color: #7FE3F7; box-shadow: 0 0 14px rgba(63, 195, 224, 0.7); }
+.seg button:disabled, .seg button:disabled:hover { color: #5E8590; border-color: #1E4C59; background: #0A1D25; box-shadow: none; cursor: not-allowed; transform: none; }
 .seg .muted { color: var(--muted); font-weight: 400; text-transform: none; }
-.check { display: inline-flex; gap: 10px; align-items: center; color: var(--ink-2); cursor: pointer; min-height: 32px; }
-.check input { appearance: none; -webkit-appearance: none; width: 20px; height: 20px; margin: 0; flex: none; border: 2px solid var(--glow);
-  border-radius: 4px; background: #071820; box-shadow: 0 0 6px rgba(63, 195, 224, 0.4); cursor: pointer; }
-.check input:checked { background: radial-gradient(#5FD6F0 0 5px, #071820 6px); }
+
+.check { display: inline-flex; gap: 10px; align-items: center; color: var(--ink-2); cursor: pointer; min-height: 32px; transition: color 0.15s; }
+.check:hover { color: var(--ink); }
+.check input { appearance: none; -webkit-appearance: none; width: 20px; height: 20px; margin: 0; flex: none; border: 2px solid #2A9DB8;
+  border-radius: 4px; background: #071820; box-shadow: 0 0 4px rgba(63, 195, 224, 0.3); cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s; }
+.check:hover input { border-color: #7FE3F7; box-shadow: 0 0 10px rgba(63, 195, 224, 0.6); }
+.check input:active { box-shadow: inset 0 0 8px rgba(63, 195, 224, 0.6); }
+.check input:checked { border-color: var(--glow); background: radial-gradient(#5FD6F0 0 5px, #071820 6px); box-shadow: 0 0 8px rgba(63, 195, 224, 0.6); }
 .filter-label { font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; }
+
 
 /* ---------- windows ---------- */
 .panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(360px, 100%), 1fr)); gap: 26px; margin-bottom: 26px; }
@@ -157,13 +219,20 @@ thead th {
   cursor: pointer; user-select: none; vertical-align: bottom; line-height: 1.25; padding-top: 9px; padding-bottom: 9px;
 }
 thead th:last-child { border-right: 0; }
-thead th:hover { color: var(--ink); }
-thead th.sorted { color: var(--ink); }
+thead th { transition: color 0.15s, background 0.15s; }
+thead th:hover { color: var(--ink); background: #123642; }
+thead th:active { background: #0B222B; }
+thead th.sorted { color: var(--cyan); background: #10313C; box-shadow: inset 0 -2px 0 var(--cyan); }
 thead th .arrow { color: var(--cyan); margin-left: 3px; }
-thead th.nosort { cursor: default; }
+thead th.nosort, thead th.nosort:hover, thead th.nosort:active { cursor: default; color: var(--muted); background: var(--surface-2); }
+thead th:focus-visible { outline-offset: -3px; }
 tbody tr.row { cursor: pointer; background: rgba(14, 40, 51, 0.9); color: #CFE6EC; }
 tbody tr.row:nth-child(even) { background: rgba(10, 32, 41, 0.9); }
+tbody tr.row td { transition: background 0.12s; }
 tbody tr.row:hover td { background: rgba(31, 155, 194, 0.16); }
+tbody tr.row:hover td:first-child, tbody tr.row.open td:first-child, tbody tr.row:focus-visible td:first-child { box-shadow: inset 3px 0 0 var(--cyan); }
+tbody tr.row:active td { background: rgba(31, 155, 194, 0.26); }
+tbody tr.row:focus-visible { outline: 2px solid #8FE9FB; outline-offset: -2px; }
 tbody tr.row.open td { background: rgba(20, 58, 72, 0.95); }
 td.name { font-weight: 700; color: var(--ink); }
 td.name .chev { display: inline-block; width: 12px; color: var(--cyan); transition: transform 0.15s; }
@@ -220,8 +289,16 @@ tr.detail > td { background: rgba(5, 18, 24, 0.96); padding: 12px 14px 18px 34px
 .error { color: var(--bad); }
 .note { font-size: 13px; color: var(--muted); margin: -10px 0 0; }
 
-details.help { background: var(--surface-3); border: 1px solid #17475A; padding: 8px 12px; }
-details.help summary { cursor: pointer; font-weight: 600; color: var(--ink); min-height: 28px; display: flex; align-items: center; }
+details.help { background: var(--surface-3); border: 1px solid #17475A; padding: 8px 12px; transition: border-color 0.15s, box-shadow 0.15s; }
+details.help:hover { border-color: #2A7F93; }
+details.help[open] { border-color: var(--axis); box-shadow: 0 0 10px rgba(63, 195, 224, 0.25); }
+details.help summary { cursor: pointer; font-weight: 600; color: var(--ink); min-height: 32px; display: flex; align-items: center; gap: 10px; list-style: none; }
+details.help summary::-webkit-details-marker { display: none; }
+details.help summary::before { content: ""; width: 7px; height: 7px; border-right: 2px solid var(--cyan); border-bottom: 2px solid var(--cyan);
+  transform: rotate(-45deg); transition: transform 0.15s; }
+details.help[open] summary::before { transform: rotate(45deg); }
+details.help summary:hover { color: #FFFFFF; }
+details.help summary:focus-visible { outline-offset: 4px; }
 details.help dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 10px 0 4px; font-size: 13px; }
 details.help dt { font-weight: 700; color: var(--ink); }
 details.help dd { margin: 0; color: var(--ink-2); }
@@ -237,7 +314,10 @@ footer code { font-size: 11px; color: var(--ink-2); }
   tr.detail > td { padding-left: 14px; }
   :root { --chamfer: 16px; }
 }
-@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2.4s; } .syncbar .fill { transition: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .spinner, .btn.busy svg { animation-duration: 2.4s; }
+  * { transition: none !important; }
+}
 </style>
 </head>
 <body>
@@ -339,6 +419,7 @@ function load(tab) {
   const q = query(tab);
   if (status[tab] === "loading" && started[tab]?.q === q) return queue;
   status[tab] = "loading"; started[tab] = { q, t: Date.now() };
+  updateBusy();
   if (tab === prefs.tab) render();
   queue = queue.then(async () => {
     if (started[tab].q !== q) return;
@@ -353,9 +434,16 @@ function load(tab) {
       status[tab] = "error"; errors[tab] = e.message;
     }
     updateCounts();
+    updateBusy();
     if (tab === prefs.tab) render();
   });
   return queue;
+}
+// The Refresh icon spins while any fetch is running.
+function updateBusy() {
+  const busy = Object.values(status).includes("loading");
+  $("#refresh").classList.toggle("busy", busy);
+  $("#refresh").setAttribute("aria-busy", String(busy));
 }
 function updateCounts() {
   $("#count-sets").textContent = data.sets ? ` ${data.sets.sets.length}` : "";
@@ -382,7 +470,9 @@ function thead(cols, state, tab) {
   return "<thead><tr>" + cols.map(c => {
     const sorted = c.key === state.sort;
     const arrow = sorted ? `<span class="arrow">${state.dir > 0 ? "↑" : "↓"}</span>` : "";
-    const attrs = c.nosort ? 'class="nosort"' : `data-sort="${c.key}" data-tab="${tab}" class="${sorted ? "sorted" : ""}" title="${esc(c.title || "")}"`;
+    const aria = sorted ? `aria-sort="${state.dir > 0 ? "ascending" : "descending"}"` : "";
+    const attrs = c.nosort ? 'class="nosort"'
+      : `data-sort="${c.key}" data-tab="${tab}" class="${sorted ? "sorted" : ""}" title="${esc(c.title || "")}" tabindex="0" ${aria}`;
     return `<th ${attrs} scope="col">${c.label}${arrow}</th>`;
   }).join("") + "</tr></thead>";
 }
@@ -810,6 +900,12 @@ document.addEventListener("click", e => {
 });
 document.addEventListener("keydown", e => {
   if ((e.key === "Enter" || e.key === " ") && e.target.matches?.("tr.row")) { e.preventDefault(); toggleRow(e.target); }
+  if ((e.key === "Enter" || e.key === " ") && e.target.matches?.("th[data-sort]")) {
+    e.preventDefault();
+    const key = e.target.dataset.sort;
+    e.target.click();
+    document.querySelector(`th[data-sort="${key}"]`)?.focus();
+  }
 });
 function toggleRow(row) {
   const [tab, slug] = row.dataset.open.split(":");
@@ -834,9 +930,103 @@ document.addEventListener("change", e => {
 });
 $("#refresh").addEventListener("click", () => load(prefs.tab));
 
+// ---------- holo dropdown ----------
+// Replaces a native <select>'s popup with a styled listbox. The select stays in the DOM (hidden) as the source of
+// truth: picking an option sets its value and fires "change", so the handlers above keep working unchanged.
+const CHEVRON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
+let selectSeq = 0;
+function holoSelect(sel) {
+  const id = "hs" + (++selectSeq);
+  // A <label> wrapper would forward clicks to the first control inside it; a plain div keeps clicks predictable.
+  let field = sel.closest(".hfield");
+  if (field.tagName === "LABEL") {
+    const div = document.createElement("div");
+    div.className = field.className;
+    if (field.title) div.title = field.title;
+    div.append(...field.childNodes);
+    field.replaceWith(div);
+    field = div;
+  }
+  const label = field.querySelector("span");
+  label.id = id + "-label";
+  const btn = document.createElement("button");
+  Object.assign(btn, { type: "button", className: "hselect-btn", id: id + "-btn" });
+  const list = document.createElement("ul");
+  Object.assign(list, { className: "hselect-list", id: id + "-list", tabIndex: -1, hidden: true });
+  btn.setAttribute("aria-haspopup", "listbox");
+  btn.setAttribute("aria-expanded", "false");
+  btn.setAttribute("aria-controls", list.id);
+  btn.setAttribute("aria-labelledby", `${label.id} ${btn.id}`);
+  list.setAttribute("role", "listbox");
+  list.setAttribute("aria-labelledby", label.id);
+  const items = [...sel.options].map((o, i) => {
+    const li = document.createElement("li");
+    Object.assign(li, { id: `${id}-opt${i}`, textContent: o.textContent });
+    li.setAttribute("role", "option");
+    li.dataset.value = o.value;
+    return li;
+  });
+  list.append(...items);
+  sel.hidden = true;
+  sel.tabIndex = -1;
+  sel.before(btn);
+  field.append(list);
+  field.classList.add("has-select");
+
+  let active = 0;
+  const sync = () => {
+    btn.innerHTML = `<span>${esc(sel.selectedOptions[0]?.textContent ?? "")}</span>${CHEVRON}`;
+    items.forEach(li => li.setAttribute("aria-selected", String(li.dataset.value === sel.value)));
+  };
+  const setActive = i => {
+    active = (i + items.length) % items.length;
+    items.forEach((li, k) => li.classList.toggle("active", k === active));
+    list.setAttribute("aria-activedescendant", items[active].id);
+    items[active].scrollIntoView({ block: "nearest" });
+  };
+  const open = () => {
+    list.hidden = false;
+    btn.setAttribute("aria-expanded", "true");
+    setActive(Math.max(sel.selectedIndex, 0));
+    list.focus();
+  };
+  const close = (refocus = true) => {
+    if (list.hidden) return;
+    list.hidden = true;
+    btn.setAttribute("aria-expanded", "false");
+    if (refocus) btn.focus();
+  };
+  const choose = i => {
+    const v = items[i].dataset.value;
+    close();
+    if (v !== sel.value) {
+      sel.value = v;
+      sel.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+    sync();
+  };
+  btn.addEventListener("click", () => (list.hidden ? open() : close()));
+  btn.addEventListener("keydown", e => {
+    if (["ArrowDown", "ArrowUp", "Enter", " "].includes(e.key)) { e.preventDefault(); open(); }
+  });
+  list.addEventListener("keydown", e => {
+    const keys = { ArrowDown: () => setActive(active + 1), ArrowUp: () => setActive(active - 1), Home: () => setActive(0),
+      End: () => setActive(items.length - 1), Enter: () => choose(active), " ": () => choose(active), Escape: () => close() };
+    if (keys[e.key]) { e.preventDefault(); keys[e.key](); }
+    else if (e.key === "Tab") close(false);
+  });
+  list.addEventListener("pointermove", e => { const li = e.target.closest("li"); if (li) setActive(items.indexOf(li)); });
+  list.addEventListener("click", e => { const li = e.target.closest("li"); if (li) choose(items.indexOf(li)); });
+  list.addEventListener("focusout", e => { if (!field.contains(e.relatedTarget)) close(false); });
+  // Clicking anywhere on the field (its caption or padding) opens it too.
+  field.addEventListener("click", e => { if (!btn.contains(e.target) && !list.contains(e.target) && list.hidden) open(); });
+  sync();
+}
+
 // ---------- start ----------
 $("#platform").value = prefs.platform;
 $("#depth").value = prefs.depth;
+document.querySelectorAll(".hfield select").forEach(holoSelect);
 render();
 // Load the visible tab first, then prefetch the other one.
 load(prefs.tab).then(() => load(prefs.tab === "sets" ? "mods" : "sets"));
