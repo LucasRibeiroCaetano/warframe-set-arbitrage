@@ -31,6 +31,8 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
         description="Set vs. parts spreads on warframe.market for unvaulted and Prime Resurgence primes.",
     )
     p.add_argument("--source", choices=["all", "pr", "unvaulted"], default="all")
+    p.add_argument("--pr", dest="source", action="store_const", const="pr",
+                   help="only Prime Resurgence (short for --source pr)")
     p.add_argument("--type", dest="kind", choices=["all", "frames", "weapons"], default="all")
     p.add_argument("-f", "--filter", help="only sets whose name contains this text")
     p.add_argument("--sort", choices=["name", *SORTS], default="delta-wts")
@@ -247,7 +249,7 @@ def render(console: Console, spreads: list[SetSpread], catalog, args: argparse.N
             "Vol = trades closed on warframe.market (self-reported, so real volume is higher). "
             "Min part vol = least-traded part, the bottleneck when building or splitting a set."
         )
-    if catalog.hidden:
+    if catalog.hidden and args.source != "pr":
         notes.append(
             "Hidden: permanently unvaulted / old primes, not in their first Prime Access cycle "
             f"(--all-unvaulted to show): {', '.join(catalog.hidden)}."

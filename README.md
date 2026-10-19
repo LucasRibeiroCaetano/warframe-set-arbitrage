@@ -22,7 +22,7 @@ one for volume. The first full run of the hour takes about 2 min. Volume is cach
 1 min. Narrow the run, or add `--no-volume`, to make it faster:
 
 ```bash
-uv run wfspread --source pr            # only Prime Resurgence
+uv run wfspread --pr                   # only Prime Resurgence (same as --source pr)
 uv run wfspread --type frames          # only warframes
 uv run wfspread -f ivara -d            # one set, with per-part breakdown
 uv run wfspread --depth 3              # average top 3 orders (ignores bait listings)
