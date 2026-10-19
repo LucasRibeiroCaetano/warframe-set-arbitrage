@@ -34,6 +34,7 @@ PRIME_BASE = re.compile(r"^(.+? Prime)\b")
 
 UNVAULTED = "Unvaulted"
 RESURGENCE = "PR"
+VAULTED = "Vaulted"
 
 
 @dataclass
@@ -193,3 +194,27 @@ def build_catalog(http: Http, all_unvaulted: bool = False) -> Catalog:
 
     ordered = sorted(targets.values(), key=lambda t: (t.kind != "frame", t.name))
     return Catalog(targets=ordered, pr_expiry=pr_expiry, drops_updated=drops_updated, hidden=sorted(hidden))
+
+
+def vaulted_targets(http: Http) -> list[Target]:
+    """Prime sets that neither drop from a current relic nor sit in Varzia's stock, frames first.
+
+    Parts are not attached (see attach_parts) so callers can narrow the list first: each set and
+    part costs market requests, and there are over a hundred vaulted sets.
+    """
+    items = http.cached_json("market_items", f"{MARKET}/items", ttl=DAY)["data"]
+    dropping_parts, _ = active_relic_parts(http)
+    dropping_sets = {f"{m.group(1)} Set" for p in dropping_parts if (m := PRIME_BASE.match(p))}
+    pr_refs, _ = resurgence_game_refs(http)
+    targets = [
+        Target(slug=i["slug"], name=_name(i), kind=kind, sources={VAULTED})
+        for i in items
+        if "set" in i["tags"] and "prime" in i["tags"] and (kind := _kind(i["tags"]))
+        and _name(i) not in dropping_sets and i["gameRef"] not in pr_refs
+    ]
+    return sorted(targets, key=lambda t: (t.kind != "frame", t.name))
+
+
+def attach_parts(http: Http, targets: list[Target]) -> None:
+    for t in targets:
+        t.parts = set_parts(http, t.slug)

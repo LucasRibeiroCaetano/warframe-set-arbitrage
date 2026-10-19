@@ -252,6 +252,7 @@ td.dim { color: var(--muted); }
 .badge.pr { color: var(--pr); background: var(--pr-wash); }
 .badge.unv { color: var(--unv); background: var(--unv-wash); }
 .badge.baro { color: var(--baro); background: var(--baro-wash); }
+.badge.vlt { color: #FFA77A; background: rgba(255, 167, 122, 0.12); }
 
 tr.detail > td { background: rgba(5, 18, 24, 0.96); padding: 12px 14px 18px 34px; text-align: left; white-space: normal; }
 .detail-grid { display: flex; flex-wrap: wrap; gap: 16px 32px; align-items: flex-start; }
@@ -443,7 +444,7 @@ function load(tab) {
 }
 // The Refresh icon spins while any fetch is running.
 function updateBusy() {
-  const busy = Object.values(status).includes("loading");
+  const busy = Object.values(status).includes("loading") || vaulted.loading;
   $("#refresh").classList.toggle("busy", busy);
   $("#refresh").setAttribute("aria-busy", String(busy));
 }
@@ -495,12 +496,15 @@ const setCols = [
 ];
 const openSets = new Set();
 
+// The set rows the Source filter points at: vaulted sets come from their own paged endpoint.
+function setsPool() {
+  const st = prefs.sets;
+  if (st.source === "vaulted") return vaulted.sets;
+  return data.sets.sets.filter(s => st.source === "all" || (st.source === "pr" ? s.pr : s.unvaulted));
+}
 function setsFiltered() {
   const st = prefs.sets, q = st.search.trim().toLowerCase();
-  return data.sets.sets.filter(s =>
-    (st.source === "all" || (st.source === "pr" ? s.pr : s.unvaulted)) &&
-    (st.kind === "all" || s.kind === st.kind) &&
-    (!q || s.name.toLowerCase().includes(q)));
+  return setsPool().filter(s => (st.kind === "all" || s.kind === st.kind) && (!q || s.name.toLowerCase().includes(q)));
 }
 function setBadges(s) {
   let b = "";
@@ -508,7 +512,58 @@ function setBadges(s) {
   if (s.unvaulted) b += s.partial
     ? '<span class="badge unv" title="Unvaulted, but some part isn\'t in a dropping relic">Unv*</span>'
     : '<span class="badge unv" title="Parts drop from current relics">Unv</span>';
+  if (s.vaulted) b += '<span class="badge vlt" title="Vaulted: no relic drops it and Varzia isn\'t selling it">Vaulted</span>';
   return b;
+}
+
+// ---------- vaulted sets ----------
+// 100+ sets with their parts is too much for one request, so they arrive a page at a time (about a minute
+// each when the CDN has no copy; pages are cached for an hour). Rows stay until platform or depth change.
+const vaulted = { sets: [], page: 0, pages: null, total: null, loading: false, error: null, key: null, generated_at: null };
+function loadVaulted(restart = false) {
+  const key = `${prefs.platform}|${prefs.depth}`;
+  if (vaulted.loading && vaulted.key === key) return;
+  if (restart || vaulted.key !== key) {
+    Object.assign(vaulted, { sets: [], page: 0, pages: null, total: null, error: null, key, generated_at: null });
+  }
+  if (vaulted.pages != null && vaulted.page >= vaulted.pages) return;
+  Object.assign(vaulted, { loading: true, error: null, started: Date.now() });
+  updateBusy();
+  if (prefs.tab === "sets") render();
+  const next = () => {
+    queue = queue.then(async () => {
+      if (vaulted.key !== key) return;
+      try {
+        const p = new URLSearchParams({ platform: prefs.platform, depth: prefs.depth, page: vaulted.page });
+        const res = await fetch(`/api/vaulted?${p}`);
+        const body = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        if (!res.ok || body.error) throw new Error(body.error || `HTTP ${res.status}`);
+        if (vaulted.key !== key) return;
+        vaulted.sets.push(...body.sets);
+        Object.assign(vaulted, { pages: body.pages, total: body.total, page: vaulted.page + 1 });
+        if (!vaulted.generated_at || body.generated_at < vaulted.generated_at) vaulted.generated_at = body.generated_at;
+        if (vaulted.page < vaulted.pages) next(); else vaulted.loading = false;
+      } catch (e) {
+        if (vaulted.key !== key) return;
+        Object.assign(vaulted, { loading: false, error: e.message });
+      }
+      updateBusy();
+      if (prefs.tab === "sets") render();
+    });
+  };
+  next();
+}
+function vaultedStatus() {
+  const done = vaulted.sets.length, total = vaulted.total ?? "…";
+  if (vaulted.error) {
+    return win("Vaulted sets", `<div class="state"><div class="big error">Couldn't load vaulted sets (page ${vaulted.page + 1})</div>
+      <div>${esc(vaulted.error)}</div><p><button class="btn" data-retry="vaulted">Try again</button></p></div>`);
+  }
+  if (!vaulted.loading) return "";
+  const page = `page ${vaulted.page + 1} of ${vaulted.pages ?? "?"}`;
+  return win("Loading vaulted sets", `<div class="state" style="padding:20px 16px">${done ? "" : '<div class="spinner"></div>'}
+    <div class="big">${done} / ${total} sets · ${page}</div>
+    <div>Each page of 20 sets takes about a minute the first time each hour; after that it's cached. Rows appear as pages arrive.</div></div>`);
 }
 function setRow(s) {
   const open = openSets.has(s.slug);
@@ -531,11 +586,12 @@ function setRow(s) {
     </div></td></tr>`;
 }
 function renderSets() {
-  const d = data.sets, st = prefs.sets;
+  const d = data.sets, st = prefs.sets, isVaulted = st.source === "vaulted";
   const rows = setsFiltered();
-  const best = [...d.sets].filter(s => s.delta_wts != null).sort((a, b) => b.delta_wts - a.delta_wts)[0];
-  const bestSell = [...d.sets].filter(s => s.delta_wtb != null).sort((a, b) => a.delta_wtb - b.delta_wtb)[0];
-  const liquid = [...d.sets].filter(s => s.set.vol_48h != null).sort((a, b) => b.set.vol_48h - a.set.vol_48h)[0];
+  const pool = isVaulted ? vaulted.sets : d.sets;
+  const best = [...pool].filter(s => s.delta_wts != null).sort((a, b) => b.delta_wts - a.delta_wts)[0];
+  const bestSell = [...pool].filter(s => s.delta_wtb != null).sort((a, b) => a.delta_wtb - b.delta_wtb)[0];
+  const liquid = [...pool].filter(s => s.set.vol_48h != null).sort((a, b) => b.set.vol_48h - a.set.vol_48h)[0];
   const inRotation = d.sets.filter(s => s.pr).map(s => s.name);
   const prWin = win("Prime Resurgence", `
     ${d.pr_expiry ? `<div><div class="kicker">Varzia's rotation ends in</div>
@@ -545,16 +601,16 @@ function renderSets() {
     <div class="kicker">In this rotation</div>
     <div class="chips">${inRotation.map(n => `<span class="chip">${esc(n)}</span>`).join("") || '<span class="na">None tracked</span>'}</div>
     ${d.drops_updated ? `<div class="centered note" style="margin:0">Drop tables updated ${new Date(d.drops_updated).toLocaleDateString()}</div>` : ""}`);
-  const flips = win("Best flips", `
+  const flips = win(isVaulted ? "Best flips · vaulted" : "Best flips", `
     ${tile("Best build & sell", best ? signed(best.delta_wts, "p") : "—", best ? `${esc(best.name)}: parts ${fmt(best.parts_wts.total)}p → set ${fmt(best.set.wts)}p` : "")}
     ${tile("Best to split", bestSell && bestSell.delta_wtb < 0 ? signed(bestSell.delta_wtb, "p") : "—", bestSell && bestSell.delta_wtb < 0 ? `${esc(bestSell.name)}: buyers pay more for parts` : "No set where parts outsell the set")}
     ${tile("Most traded set", liquid ? `${liquid.set.vol_48h}` : "—", liquid ? `${esc(liquid.name)}, trades in 48h` : "")}`);
   const filters = win("Filters", `
     <label class="hfield"><span>Search sets</span><input type="search" id="search-sets" placeholder="e.g. Ivara" value="${esc(st.search)}"></label>
-    <div><p class="filter-label">Source</p>${seg("sets", "source", [["all", "All"], ["pr", "Prime Resurgence"], ["unvaulted", "Unvaulted"]])}</div>
+    <div><p class="filter-label">Source</p>${seg("sets", "source", [["all", "All farmable"], ["pr", "Prime Resurgence"], ["unvaulted", "Unvaulted"], ["vaulted", "Vaulted"]])}</div>
     <div><p class="filter-label">Type</p>${seg("sets", "kind", [["all", "All types"], ["frame", "Warframes"], ["weapon", "Weapons"]])}</div>
-    <label class="check" title="Include the permanent relic pool and permanently unvaulted primes (refetches)">
-      <input type="checkbox" id="all-sets" ${st.all ? "checked" : ""}> All unvaulted primes</label>
+    ${isVaulted ? "" : `<label class="check" title="Include the permanent relic pool and permanently unvaulted primes (refetches)">
+      <input type="checkbox" id="all-sets" ${st.all ? "checked" : ""}> All unvaulted primes</label>`}
     ${help("sets")}`);
   const groups = [["frame", "Warframes"], ["weapon", "Weapons"]].map(([kind, label]) => {
     const g = sortRows(rows.filter(s => s.kind === kind), setCols, st);
@@ -562,9 +618,11 @@ function renderSets() {
     return win(`${label} <span class="count">${g.length}</span>`,
       `<div class="table-wrap"><table>${thead(setCols, st, "sets")}<tbody>${g.map(setRow).join("")}</tbody></table></div>`);
   }).join("");
-  const hidden = d.hidden.length && !st.all
+  const hidden = d.hidden.length && !st.all && !isVaulted
     ? `<p class="note">Hidden (not in their first Prime Access cycle): ${esc(d.hidden.join(", "))}.</p>` : "";
-  return `<div class="panels">${prWin}${flips}${filters}</div>` + (groups || emptyFilter()) + hidden;
+  // While vaulted pages are still arriving an empty filter result isn't final, so the progress window says enough.
+  const tables = groups || (isVaulted && (vaulted.loading || vaulted.error) ? "" : emptyFilter());
+  return `<div class="panels">${prWin}${flips}${filters}</div>` + (isVaulted ? vaultedStatus() : "") + tables + hidden;
 }
 
 // ---------- mods tab ----------
@@ -806,6 +864,7 @@ const HELP = {
     ["% from 90d avg", "Set WTS vs the set's average sold price over 90 days, weighted by volume (hover for the average). Negative means the set is cheaper than usual."],
     ["Vol 48h", "Trades closed on warframe.market (self-reported, so real volume is higher). Min part vol is the bottleneck when building or splitting."],
     ["PR / Unv / Unv*", "Varzia's current stock / parts drop from current relics / some part isn't in a dropping relic. Unvaulted primes are shown only in their first Prime Access cycle."],
+    ["Vaulted", "Prime sets no relic drops and Varzia isn't selling (100+ sets). They load 20 at a time, about a minute per page the first time each hour, then come from cache."],
   ],
   mods: [
     ["Dip", "Live rank 0 WTS vs the 90-day median of daily medians. Negative means cheaper than usual: buy during Baro's visit, sell a couple of months after he leaves."],
@@ -863,6 +922,20 @@ function renderFooter() {
 const CACHE_MS = 10 * 60 * 1000;
 function renderSync() {
   const tab = prefs.tab, d = data[tab], fill = $("#sync-fill"), text = $("#sync-text");
+  if (tab === "sets" && prefs.sets.source === "vaulted" && status.sets !== "loading") {
+    if (vaulted.loading) {
+      fill.style.width = (vaulted.total ? vaulted.sets.length / vaulted.total : 0) * 100 + "%";
+      text.textContent = `LOADING VAULTED SETS ${vaulted.sets.length} / ${vaulted.total ?? "…"} · PAGE ${vaulted.page + 1} OF ${vaulted.pages ?? "?"}`;
+    } else if (vaulted.generated_at) {
+      const t = new Date(vaulted.generated_at).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+      fill.style.width = Math.min((Date.now() - Date.parse(vaulted.generated_at)) / 3600e3, 1) * 100 + "%";
+      text.textContent = `${vaulted.sets.length} VAULTED SETS · SYNCED ${t} · CACHED FOR 1 HOUR`;
+    } else {
+      fill.style.width = "0";
+      text.textContent = vaulted.error ? "VAULTED LINK ERROR" : "VAULTED SETS";
+    }
+    return;
+  }
   if (status[tab] === "loading") {
     const s = Math.round((Date.now() - started[tab].t) / 1000);
     fill.style.width = Math.min(s / (tab === "sets" ? 90 : 20), 1) * 100 + "%";
@@ -896,10 +969,12 @@ document.addEventListener("click", e => {
   const segBtn = e.target.closest("[data-seg]");
   if (segBtn) {
     const [tab, key, v] = segBtn.dataset.seg.split(":");
-    prefs[tab][key] = v; savePrefs(); render(); return;
+    prefs[tab][key] = v; savePrefs(); render();
+    if (tab === "sets" && key === "source" && v === "vaulted") loadVaulted();
+    return;
   }
   const retry = e.target.closest("[data-retry]");
-  if (retry) { load(retry.dataset.retry); return; }
+  if (retry) { retry.dataset.retry === "vaulted" ? loadVaulted() : load(retry.dataset.retry); return; }
   const row = e.target.closest("tr.row");
   if (row) toggleRow(row);
 });
@@ -931,9 +1006,13 @@ document.addEventListener("change", e => {
     prefs[id] = e.target.value; savePrefs();
     data.sets = data.mods = null; updateCounts();
     load(prefs.tab).then(() => load(prefs.tab === "sets" ? "mods" : "sets"));
+    if (prefs.sets.source === "vaulted") loadVaulted(true);
   }
 });
-$("#refresh").addEventListener("click", () => load(prefs.tab));
+$("#refresh").addEventListener("click", () => {
+  load(prefs.tab);
+  if (prefs.tab === "sets" && prefs.sets.source === "vaulted") loadVaulted(true);
+});
 
 // ---------- holo dropdown ----------
 // Replaces a native <select>'s popup with a styled listbox. The select stays in the DOM (hidden) as the source of
@@ -1035,6 +1114,7 @@ document.querySelectorAll(".hfield select").forEach(holoSelect);
 render();
 // Load the visible tab first, then prefetch the other one.
 load(prefs.tab).then(() => load(prefs.tab === "sets" ? "mods" : "sets"));
+if (prefs.sets.source === "vaulted") loadVaulted();
 setInterval(renderSync, 1000);
 </script>
 </body>

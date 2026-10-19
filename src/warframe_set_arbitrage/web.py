@@ -1,9 +1,9 @@
 """JSON API and local server for the dashboard.
 
-The same handlers run as Vercel functions (api/sets.py, api/mods.py) and behind
-`wfspread web`. On Vercel the CDN caches each response for CACHE_SECONDS, so
-warframe.market is hit at most once per window per query; locally an in-memory
-cache does the same job.
+The same handlers run as Vercel functions (api/sets.py, api/mods.py, api/vaulted.py)
+and behind `wfspread web`. On Vercel the CDN caches each response for its route's
+window (ROUTES), so warframe.market is hit at most once per window per query;
+locally an in-memory cache does the same job.
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
-from .catalog import RESURGENCE, UNVAULTED, build_catalog
+from .catalog import RESURGENCE, UNVAULTED, VAULTED, attach_parts, build_catalog, vaulted_targets
 from .http import Http
 from .mods import ModSpread, baro_status, fetch_mod_spreads, primed_mods
 from .pricing import Quote, SetSpread, fetch_set_spreads
@@ -72,6 +72,37 @@ def sets_payload(query: dict[str, list[str]]) -> dict:
     }
 
 
+VAULTED_PAGE = 20  # sets per request: ~200 market requests, about a minute, well inside Vercel's time limit
+
+
+def _page(query: dict[str, list[str]]) -> int:
+    try:
+        return max(int(query.get("page", ["0"])[0]), 0)
+    except ValueError:
+        return 0
+
+
+def vaulted_payload(query: dict[str, list[str]]) -> dict:
+    """One page of vaulted prime sets (frames first). The dashboard requests the pages one after another."""
+    opts, page = _options(query), _page(query)
+    http = Http(platform=opts["platform"])
+    try:
+        targets = vaulted_targets(http)
+        chunk = targets[page * VAULTED_PAGE:(page + 1) * VAULTED_PAGE]
+        attach_parts(http, chunk)
+        spreads = fetch_set_spreads(http, chunk, depth=opts["depth"])
+    finally:
+        http.close()
+    return {
+        "generated_at": _iso(datetime.now(timezone.utc)),
+        **opts,
+        "page": page,
+        "pages": -(-len(targets) // VAULTED_PAGE),
+        "total": len(targets),
+        "sets": [_set(s) for s in spreads],
+    }
+
+
 def _set(s: SetSpread) -> dict:
     t = s.target
     vols = s.volumes or {}
@@ -88,6 +119,7 @@ def _set(s: SetSpread) -> dict:
         "kind": t.kind,
         "pr": RESURGENCE in t.sources,
         "unvaulted": UNVAULTED in t.sources,
+        "vaulted": VAULTED in t.sources,
         "partial": t.partial,
         "set": {**_quote(s.set_quote), **vol(t.slug)},
         "parts_wts": {"total": wts_sum, "missing": wts_missing},
@@ -157,30 +189,36 @@ def _mod(s: ModSpread) -> dict:
     }
 
 
-ROUTES = {"/api/sets": sets_payload, "/api/mods": mods_payload}
+# path -> (payload function, seconds to cache). Vaulted prices move slowly and cost the most to fetch.
+ROUTES = {
+    "/api/sets": (sets_payload, CACHE_SECONDS),
+    "/api/mods": (mods_payload, CACHE_SECONDS),
+    "/api/vaulted": (vaulted_payload, 3600),
+}
 
 
 class ApiHandler(BaseHTTPRequestHandler):
-    """Serves /api/sets and /api/mods. Vercel imports this as each function's `handler`."""
+    """Serves the /api/* routes. Vercel imports this as each function's `handler`."""
 
     def do_GET(self) -> None:
         url = urlsplit(self.path)
-        route = ROUTES.get(url.path.rstrip("/"))
-        if route is None:
-            self._send(404, {"error": "not found"}, cache=False)
+        path = url.path.rstrip("/")
+        if path not in ROUTES:
+            self._send(404, {"error": "not found"}, cache=None)
             return
+        route, ttl = ROUTES[path]
         try:
-            body = self.payload(route, url.path.rstrip("/"), parse_qs(url.query))
+            body = self.payload(route, ttl, path, parse_qs(url.query))
         except Exception as exc:
             traceback.print_exc()
-            self._send(502, {"error": f"{type(exc).__name__}: {exc}"}, cache=False)
+            self._send(502, {"error": f"{type(exc).__name__}: {exc}"}, cache=None)
             return
-        self._send(200, body, cache=True)
+        self._send(200, body, cache=ttl)
 
-    def payload(self, route, path: str, query: dict[str, list[str]]) -> dict:
+    def payload(self, route, ttl: int, path: str, query: dict[str, list[str]]) -> dict:
         return route(query)
 
-    def _send(self, status: int, body: dict, cache: bool) -> None:
+    def _send(self, status: int, body: dict, cache: int | None) -> None:
         data = json.dumps(body, separators=(",", ":")).encode()
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
@@ -188,7 +226,7 @@ class ApiHandler(BaseHTTPRequestHandler):
         if cache:
             # Only Vercel's CDN caches (serving a stale copy while it refetches in the background);
             # browsers always ask it, so they never show a copy older than the CDN's.
-            self.send_header("Vercel-CDN-Cache-Control", f"max-age={CACHE_SECONDS}, stale-while-revalidate=3600")
+            self.send_header("Vercel-CDN-Cache-Control", f"max-age={cache}, stale-while-revalidate=3600")
             self.send_header("Cache-Control", "no-cache")
         else:
             self.send_header("Cache-Control", "no-store")
@@ -221,11 +259,11 @@ class LocalHandler(ApiHandler):
         self.end_headers()
         self.wfile.write(data)
 
-    def payload(self, route, path: str, query: dict[str, list[str]]) -> dict:
-        key = f"{path}?{sorted(_options(query).items())}"
+    def payload(self, route, ttl: int, path: str, query: dict[str, list[str]]) -> dict:
+        key = f"{path}?{sorted(_options(query).items())}&page={_page(query)}"
         with self.lock:
             hit = self.memo.get(key)
-            if hit and time.time() - hit[0] < CACHE_SECONDS:
+            if hit and time.time() - hit[0] < ttl:
                 return hit[1]
             body = route(query)
             self.memo[key] = (time.time(), body)

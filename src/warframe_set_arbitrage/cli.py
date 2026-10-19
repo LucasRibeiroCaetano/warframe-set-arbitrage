@@ -12,7 +12,7 @@ from rich.progress import BarColumn, MofNCompleteColumn, Progress, TextColumn, T
 from rich.rule import Rule
 from rich.table import Table
 
-from .catalog import RESURGENCE, UNVAULTED, build_catalog
+from .catalog import RESURGENCE, UNVAULTED, VAULTED, attach_parts, build_catalog, vaulted_targets
 from .http import Http
 from .pricing import Progress as OnProgress
 from .pricing import Quote, SetSpread, fetch_set_spreads
@@ -34,7 +34,8 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
         description="Set vs. parts spreads on warframe.market for unvaulted and Prime Resurgence primes.",
         epilog="Run 'wfspread mods' for primed mods around Baro's visits, or 'wfspread web' for the dashboard.",
     )
-    p.add_argument("--source", choices=["all", "pr", "unvaulted"], default="all")
+    p.add_argument("--source", choices=["all", "pr", "unvaulted", "vaulted"], default="all",
+                   help="vaulted = prime sets you can't farm or buy from Varzia right now (slow: 100+ sets)")
     p.add_argument("--pr", dest="source", action="store_const", const="pr",
                    help="only Prime Resurgence (short for --source pr)")
     p.add_argument("--type", dest="kind", choices=["all", "frames", "weapons"], default="all")
@@ -106,6 +107,8 @@ def source_label(spread: SetSpread) -> str:
         labels.append("[magenta]PR[/]")
     if UNVAULTED in t.sources:
         labels.append("[cyan]Unv*[/]" if t.partial else "[cyan]Unv[/]")
+    if VAULTED in t.sources:
+        labels.append("[yellow]Vlt[/]")
     return " ".join(labels)
 
 
@@ -129,6 +132,9 @@ def main(argv: list[str] | None = None) -> int:
             targets = [t for t in targets if RESURGENCE in t.sources]
         elif args.source == "unvaulted":
             targets = [t for t in targets if UNVAULTED in t.sources]
+        elif args.source == "vaulted":
+            with console.status("Finding vaulted sets…"):
+                targets = vaulted_targets(http)
         if args.kind != "all":
             targets = [t for t in targets if t.kind == args.kind.rstrip("s")]
         if args.filter:
@@ -138,6 +144,13 @@ def main(argv: list[str] | None = None) -> int:
         if not targets:
             console.print("[yellow]No sets match those filters.[/]")
             return 1
+        if args.source == "vaulted":
+            with console.status(f"Loading parts for {len(targets)} vaulted sets…"):
+                attach_parts(http, targets)
+            slugs = len(targets) + sum(len(t.parts) for t in targets)
+            minutes = slugs * (1 if args.no_volume else 2) / args.rps / 60
+            console.print(f"[dim]{len(targets)} vaulted sets, {slugs} items: about {minutes:.0f} min at {args.rps:g} req/s "
+                          "(narrow it with --type or -f).[/]")
 
         with fetch_progress(console) as on_progress:
             spreads = fetch_set_spreads(http, targets, args.depth, not args.no_volume, on_progress)
@@ -259,14 +272,14 @@ def render(console: Console, spreads: list[SetSpread], catalog, args: argparse.N
         "Δ WTS = set WTS − Σ part WTS  (+ → parts are cheaper to buy than the set; build and sell the set)",
         "Δ WTB = set WTB − Σ part WTB  (− → buyers pay more for loose parts; sell parts, not the set)",
         "Prices are the best orders from players currently in game. ≥N = some part has no in-game order on that side.",
-        "Unv = parts drop from current relics · Unv* = some part isn't in a dropping relic · PR = Varzia's current stock.",
+        "Unv = parts drop from current relics · Unv* = some part isn't in a dropping relic · PR = Varzia's current stock · Vlt = vaulted.",
     ]
     if with_volume:
         notes.append(
             "Vol = trades closed on warframe.market (self-reported, so real volume is higher). "
             "Min part vol = least-traded part, the bottleneck when building or splitting a set."
         )
-    if catalog.hidden and args.source != "pr":
+    if catalog.hidden and args.source not in ("pr", "vaulted"):
         notes.append(
             "Hidden: permanently unvaulted / old primes, not in their first Prime Access cycle "
             f"(--all-unvaulted to show): {', '.join(catalog.hidden)}."

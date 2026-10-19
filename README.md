@@ -6,7 +6,8 @@ actually farmable right now:
 - **Unvaulted**: primes whose parts drop from relics in the current official drop tables.
 - **Prime Resurgence (PR)**: primes in Varzia's current rotation.
 
-Vaulted primes are skipped. Unvaulted primes are only shown during their first Prime Access cycle, which covers
+Vaulted primes are skipped by default; pick the **Vaulted** source (`--source vaulted`, or Source → Vaulted on the
+dashboard) to see all 100+ vaulted sets with their parts. Unvaulted primes are only shown during their first Prime Access cycle, which covers
 warframes that have never been vaulted and the weapons released with them. That hides the permanent relic pool (Braton,
 Lex, Paris Prime, ...) and the permanently unvaulted Valkyr and Nyx Prime with their weapons. Pass `--all-unvaulted` to
 show everything that drops. Warframes and weapons are shown in separate tables.
@@ -28,6 +29,8 @@ It's a static page ([static/index.html](src/warframe_set_arbitrage/static/index.
 `/api/sets` and `/api/mods` ([web.py](src/warframe_set_arbitrage/web.py)). Both take `platform`, `depth` (1–5) and
 `all=1`. On Vercel they run as Python functions ([api/](api/)), and the CDN caches each response for 10 minutes, so
 warframe.market is hit at most once per window. A cold fetch takes about 20 s for mods and about 1 min for sets.
+Vaulted sets come from `/api/vaulted?page=N`, 20 sets per page (about a minute each when cold, inside Vercel's time
+limit), cached for an hour; the dashboard requests the pages one after another and shows rows as they arrive.
 The Vercel project is linked to this GitHub repo, so pushing to `main` deploys to production.
 
 ## Run
@@ -42,6 +45,7 @@ one for volume. The first full run of the hour takes about 2 min. Volume is cach
 
 ```bash
 uv run wfspread --pr                   # only Prime Resurgence (same as --source pr)
+uv run wfspread --source vaulted --type frames   # vaulted sets (slow: narrow with --type or -f)
 uv run wfspread --type frames          # only warframes
 uv run wfspread -f ivara -d            # one set, with per-part breakdown
 uv run wfspread --depth 3              # average top 3 orders (ignores bait listings)
