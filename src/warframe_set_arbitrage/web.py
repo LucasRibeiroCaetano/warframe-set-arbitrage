@@ -95,6 +95,7 @@ def _set(s: SetSpread) -> dict:
         "min_part_vol_48h": s.min_part_vol_48h,
         "delta_wts": s.delta_wts,
         "delta_wtb": s.delta_wtb,
+        "vs_avg": s.vs_avg,
         "parts": [
             {"slug": p.slug, "name": p.name, "qty": p.qty, **_quote(s.part_quotes[p.slug]), **vol(p.slug)}
             for p in t.parts

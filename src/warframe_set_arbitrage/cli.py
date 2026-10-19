@@ -83,6 +83,14 @@ def fmt_delta(v: float | None) -> str:
     return f"[{color}]{v:+.0f}[/]"
 
 
+def fmt_pct(v: float | None) -> str:
+    """% vs a usual price: below usual is highlighted (cheaper than normal)."""
+    if v is None:
+        return "[dim]—[/]"
+    color = "green" if v <= -10 else "red" if v >= 10 else "dim"
+    return f"[{color}]{v:+.0f}%[/]"
+
+
 def fmt_vol(v: int | None) -> str:
     if v is None:
         return "—"
@@ -172,6 +180,7 @@ def spread_table(title: str, spreads: list[SetSpread], with_volume: bool) -> Tab
     table.add_column("Set WTB", justify="right")
     table.add_column("Spread", justify="right", style="dim")
     if with_volume:
+        table.add_column("vs 90d\navg", justify="right")
         table.add_column("Set vol\n48h", justify="right")
     table.add_column("Parts\nWTS Σ", justify="right")
     table.add_column("Parts\nWTB Σ", justify="right")
@@ -189,6 +198,7 @@ def spread_table(title: str, spreads: list[SetSpread], with_volume: bool) -> Tab
             fmt(s.set_quote.spread),
         ]
         if with_volume:
+            row.append(fmt_pct(s.vs_avg))
             row.append(fmt_vol(s.set_volume.vol_48h if s.set_volume else None))
         row += [fmt_parts(s, "wts"), fmt_parts(s, "wtb")]
         if with_volume:
@@ -273,13 +283,13 @@ def write_csv(path: str, spreads: list[SetSpread]) -> None:
     with open(path, "w", newline="", encoding="utf-8") as fh:
         w = csv.writer(fh)
         w.writerow(["set", "type", "sources", "partial", "set_wts", "set_wtb", "set_vol_48h", "set_vol_7d",
-                    "parts_wts", "parts_wtb", "min_part_vol_48h", "delta_wts", "delta_wtb"])
+                    "parts_wts", "parts_wtb", "min_part_vol_48h", "delta_wts", "delta_wtb", "set_avg_90d", "vs_avg_pct"])
         for s in spreads:
             t = s.target
             v = s.set_volume
             w.writerow([t.name, t.kind, "+".join(sorted(t.sources)), t.partial, s.set_quote.wts,
                         s.set_quote.wtb, v and v.vol_48h, v and v.vol_7d, s.parts_wts, s.parts_wtb,
-                        s.min_part_vol_48h, s.delta_wts, s.delta_wtb])
+                        s.min_part_vol_48h, s.delta_wts, s.delta_wtb, v and v.avg_90d, s.vs_avg])
 
 
 if __name__ == "__main__":

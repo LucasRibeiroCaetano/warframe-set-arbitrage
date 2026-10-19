@@ -54,6 +54,12 @@ class Volume:
     vol_48h: int
     vol_7d: int
     avg_48h: float | None  # volume-weighted average sold price over 48h
+    avg_90d: float | None  # volume-weighted average sold price over 90 days (the longest the market keeps)
+
+
+def _weighted_avg(buckets: list[dict]) -> float | None:
+    volume = sum(b["volume"] for b in buckets)
+    return sum(b["avg_price"] * b["volume"] for b in buckets) / volume if volume else None
 
 
 def _reduce_stats(payload: dict) -> dict:
@@ -61,20 +67,26 @@ def _reduce_stats(payload: dict) -> dict:
     # Mods carry one series per rank; prime parts/sets have no rank.
     hourly = [b for b in closed.get("48hours", []) if not b.get("mod_rank")]
     daily = [b for b in closed.get("90days", []) if not b.get("mod_rank")]
-    vol_48h = sum(b["volume"] for b in hourly)
     return {
-        "vol_48h": vol_48h,
+        "vol_48h": sum(b["volume"] for b in hourly),
         "vol_7d": sum(b["volume"] for b in daily[-7:]),
-        "avg_48h": sum(b["avg_price"] * b["volume"] for b in hourly) / vol_48h if vol_48h else None,
+        "avg_48h": _weighted_avg(hourly),
+        "avg_90d": _weighted_avg(daily),
     }
 
 
+# Bump when _reduce_stats changes shape, so stale cache files aren't read back.
+_STATS_KEY = "stats_v2_{slug}"
+
+
 def stats_cached(http: Http, slug: str) -> bool:
-    return http.is_cached(f"stats_{slug}", STATS_TTL)
+    return http.is_cached(_STATS_KEY.format(slug=slug), STATS_TTL)
 
 
 def fetch_volume(http: Http, slug: str) -> Volume:
-    data = http.cached_json(f"stats_{slug}", STATS_URL.format(slug=slug), ttl=STATS_TTL, transform=_reduce_stats)
+    data = http.cached_json(
+        _STATS_KEY.format(slug=slug), STATS_URL.format(slug=slug), ttl=STATS_TTL, transform=_reduce_stats
+    )
     return Volume(**data)
 
 
@@ -164,6 +176,14 @@ class SetSpread:
     def delta_wtb(self) -> float | None:
         """Set WTB minus parts WTB. Positive: buyers pay more for the set."""
         return _diff(self.set_quote.wtb, self.parts_wtb)
+
+    @property
+    def vs_avg(self) -> float | None:
+        """Live set WTS vs the set's 90-day volume-weighted average, in %."""
+        v, wts = self.set_volume, self.set_quote.wts
+        if wts is None or not v or not v.avg_90d:
+            return None
+        return (wts - v.avg_90d) / v.avg_90d * 100
 
 
 def _mul(v: float | None, qty: int) -> float | None:

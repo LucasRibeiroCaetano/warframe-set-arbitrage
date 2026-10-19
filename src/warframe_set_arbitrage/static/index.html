@@ -485,6 +485,7 @@ const setCols = [
   { key: "set_wts", label: "Set<br>WTS", sort: r => r.set.wts, title: "Cheapest in-game seller for the full set" },
   { key: "set_wtb", label: "Set<br>WTB", sort: r => r.set.wtb, title: "Highest in-game buyer for the full set" },
   { key: "spread", label: "Spread", sort: r => r.set.spread, title: "Set WTS − Set WTB" },
+  { key: "vs_avg", label: "% from<br>90d avg", title: "Set WTS vs the set's volume-weighted average sold price over 90 days" },
   { key: "set_vol", label: "Set vol<br>48h", sort: r => r.set.vol_48h, title: "Set trades closed in the last 48h" },
   { key: "parts_wts", label: "Parts<br>WTS Σ", sort: r => r.parts_wts.total, title: "Sum of cheapest sellers over parts" },
   { key: "parts_wtb", label: "Parts<br>WTB Σ", sort: r => r.parts_wtb.total, title: "Sum of highest buyers over parts" },
@@ -514,6 +515,7 @@ function setRow(s) {
   const row = `<tr class="row${open ? " open" : ""}" data-open="sets:${s.slug}" tabindex="0" aria-expanded="${open}">
     <td class="name"><span class="chev">›</span> ${esc(s.name)}${setBadges(s)}</td>
     <td>${fmt(s.set.wts)}</td><td>${fmt(s.set.wtb)}</td><td class="dim">${fmt(s.set.spread)}</td>
+    <td title="${s.set.avg_90d != null ? `90d average ${fmt(Math.round(s.set.avg_90d * 10) / 10)}p` : ""}">${signed(s.vs_avg == null ? null : Math.round(s.vs_avg), "%", true)}</td>
     <td>${vol(s.set.vol_48h)}</td><td>${partsSum(s.parts_wts)}</td><td>${partsSum(s.parts_wtb)}</td>
     <td>${vol(s.min_part_vol_48h)}</td><td>${signed(s.delta_wts)}</td><td>${signed(s.delta_wtb)}</td></tr>`;
   if (!open) return row;
@@ -801,6 +803,7 @@ const HELP = {
     ["Parts WTS Σ / WTB Σ", "Sum over parts (× quantity) of the cheapest seller / highest buyer. ≥N means some part has no in-game order on that side."],
     ["Δ WTS", "Set WTS − Parts WTS Σ. Positive: buying the parts is cheaper than the set, so build and sell the set."],
     ["Δ WTB", "Set WTB − Parts WTB Σ. Negative: buyers pay more for loose parts than for the set."],
+    ["% from 90d avg", "Set WTS vs the set's average sold price over 90 days, weighted by volume (hover for the average). Negative means the set is cheaper than usual."],
     ["Vol 48h", "Trades closed on warframe.market (self-reported, so real volume is higher). Min part vol is the bottleneck when building or splitting."],
     ["PR / Unv / Unv*", "Varzia's current stock / parts drop from current relics / some part isn't in a dropping relic. Unvaulted primes are shown only in their first Prime Access cycle."],
   ],
