@@ -9,6 +9,7 @@ cache does the same job.
 from __future__ import annotations
 
 import json
+import mimetypes
 import threading
 import time
 import traceback
@@ -211,8 +212,9 @@ class LocalHandler(ApiHandler):
             self.send_error(404)
             return
         data = file.read_bytes()
+        kind = mimetypes.guess_type(file.name)[0] or "application/octet-stream"
         self.send_response(200)
-        self.send_header("Content-Type", "text/html; charset=utf-8" if file.suffix == ".html" else "text/plain")
+        self.send_header("Content-Type", f"{kind}; charset=utf-8" if kind.startswith("text/") else kind)
         self.send_header("Content-Length", str(len(data)))
         self.send_header("Cache-Control", "no-cache")
         self.end_headers()

@@ -5,269 +5,261 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Warframe Set Arbitrage</title>
 <meta name="description" content="Prime set vs. parts spreads and primed mods around Baro's visits, live from warframe.market.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232a78d6'/%3E%3Cpath d='M7 21l6-7 5 4 7-9' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23081A23' stroke='%2345D4F0' stroke-width='2'/%3E%3Cpath d='M7 21l6-7 5 4 7-9' stroke='%2345D4F0' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
 <style>
+/* Holo terminal: dark teal windows with glowing cyan chamfered frames over a blurred Warframe backdrop. */
 :root {
-  color-scheme: light;
-  --page: #f9f9f7;
-  --surface: #fcfcfb;
-  --surface-2: #f3f2ee;
-  --ink: #0b0b0b;
-  --ink-2: #52514e;
-  --muted: #898781;
-  --grid: #e1e0d9;
-  --axis: #c3c2b7;
-  --border: rgba(11, 11, 11, 0.10);
-  --series-1: #2a78d6;
-  --series-2: #eb6834;
-  --good: #006300;
-  --bad: #c42f2f;
-  --warn: #8a5a00;
-  --accent: #2a78d6;
-  --accent-wash: rgba(42, 120, 214, 0.10);
-  --baro: #8a5a00;
-  --baro-wash: rgba(250, 178, 25, 0.16);
-  --pr: #6250d6;
-  --pr-wash: rgba(98, 80, 214, 0.12);
-  --unv: #12805a;
-  --unv-wash: rgba(27, 175, 122, 0.12);
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.04);
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    color-scheme: dark;
-    --page: #0d0d0d;
-    --surface: #1a1a19;
-    --surface-2: #232321;
-    --ink: #f0efec;
-    --ink-2: #c3c2b7;
-    --muted: #898781;
-    --grid: #2c2c2a;
-    --axis: #383835;
-    --border: rgba(255, 255, 255, 0.10);
-    --series-1: #3987e5;
-    --series-2: #d95926;
-    --good: #2fbf2f;
-    --bad: #ef7070;
-    --warn: #fab219;
-    --accent: #5598e7;
-    --accent-wash: rgba(57, 135, 229, 0.16);
-    --baro: #fab219;
-    --baro-wash: rgba(250, 178, 25, 0.14);
-    --pr: #9085e9;
-    --pr-wash: rgba(144, 133, 233, 0.16);
-    --unv: #3fcf98;
-    --unv-wash: rgba(25, 158, 112, 0.18);
-    --shadow: none;
-  }
-}
-:root[data-theme="dark"] {
   color-scheme: dark;
-  --page: #0d0d0d;
-  --surface: #1a1a19;
-  --surface-2: #232321;
-  --ink: #f0efec;
-  --ink-2: #c3c2b7;
-  --muted: #898781;
-  --grid: #2c2c2a;
-  --axis: #383835;
-  --border: rgba(255, 255, 255, 0.10);
-  --series-1: #3987e5;
-  --series-2: #d95926;
-  --good: #2fbf2f;
-  --bad: #ef7070;
-  --warn: #fab219;
-  --accent: #5598e7;
-  --accent-wash: rgba(57, 135, 229, 0.16);
-  --baro: #fab219;
-  --baro-wash: rgba(250, 178, 25, 0.14);
-  --pr: #9085e9;
-  --pr-wash: rgba(144, 133, 233, 0.16);
-  --unv: #3fcf98;
-  --unv-wash: rgba(25, 158, 112, 0.18);
-  --shadow: none;
+  --page: #04111A;
+  --surface: #081A23;
+  --surface-2: #0E2933;
+  --surface-3: #0B2430;
+  --ink: #EAF7FB;
+  --ink-2: #9DBCC6;
+  --muted: #7FA7B3;
+  --grid: #12323E;
+  --axis: #2A7F93;
+  --line: #1B4C5A;
+  --glow: #3FC3E0;
+  --cyan: #45D4F0;
+  --series-1: #1F9BC2;
+  --series-2: #CC7432;
+  --good: #6EE6C2;
+  --bad: #F0645A;
+  --warn: #F2C25C;
+  --accent: #45D4F0;
+  --accent-wash: rgba(69, 212, 240, 0.14);
+  --baro: #F2C25C;
+  --baro-wash: rgba(242, 194, 92, 0.14);
+  --pr: #C9A8FF;
+  --pr-wash: rgba(201, 168, 255, 0.14);
+  --unv: #7FE0B8;
+  --unv-wash: rgba(127, 224, 184, 0.12);
+  --chamfer: 22px;
 }
 
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0;
-  background: var(--page);
-  color: var(--ink);
-  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: var(--page) url(backdrop.jpg) center top / cover no-repeat fixed;
+  color: var(--ink-2);
+  font: 15px/1.45 "Exo 2", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 button, input, select { font: inherit; color: inherit; }
-a { color: var(--accent); }
-.wrap { max-width: 1320px; margin: 0 auto; padding: 20px 16px 48px; }
+a { color: var(--cyan); }
+a:hover { color: #BDF2FD; }
+:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.wrap { max-width: 1360px; margin: 0 auto; padding: 24px 16px 56px; }
 
-header.top { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: flex-end; justify-content: space-between; }
-h1 { font-size: 20px; margin: 0; letter-spacing: -0.01em; }
-.sub { color: var(--ink-2); margin: 2px 0 0; }
-.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.controls label { color: var(--ink-2); font-size: 13px; display: inline-flex; gap: 6px; align-items: center; }
-select, input[type="search"] {
-  background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; min-height: 34px;
-}
-input[type="search"] { width: 200px; max-width: 100%; }
+/* ---------- header ---------- */
+header.top { display: flex; flex-wrap: wrap; gap: 16px 28px; align-items: center; justify-content: space-between; }
+.logo { font-family: Orbitron, sans-serif; font-weight: 900; font-size: 40px; line-height: 1; letter-spacing: 0.04em; color: #6FD8EE;
+  text-shadow: 0 0 18px rgba(63, 195, 224, 0.7), 0 0 2px #BDF2FD; margin: 0; }
+.logo-sub { font-family: Orbitron, sans-serif; font-weight: 700; font-size: 12px; letter-spacing: 0.42em; color: #3E8EA2; margin-top: 4px; padding-left: 3px; }
+.controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: stretch; }
+
+/* ---------- holo controls ---------- */
 .btn {
-  background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; min-height: 34px;
-  cursor: pointer; display: inline-flex; gap: 6px; align-items: center;
+  font-weight: 700; font-size: 14px; letter-spacing: 0.1em; text-transform: uppercase; color: #D7F3FA;
+  background: linear-gradient(#18566A, #0D3341); border: 2px solid var(--glow); border-radius: 3px;
+  box-shadow: 0 0 8px rgba(63, 195, 224, 0.45), inset 0 0 10px rgba(63, 195, 224, 0.2);
+  padding: 8px 18px; min-height: 44px; cursor: pointer; display: inline-flex; gap: 8px; align-items: center; justify-content: center;
 }
-.btn:hover { background: var(--surface-2); }
+.btn:hover { background: linear-gradient(#1D6A80, #10404F); }
 .btn:disabled { opacity: 0.55; cursor: progress; }
-.icon-btn { width: 34px; justify-content: center; padding: 0; }
+.hfield { display: flex; flex-direction: column; gap: 0; background: #071820; border: 1px solid var(--line);
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.5); padding: 4px 12px 4px; min-width: 120px; }
+.hfield > span { font-size: 11px; letter-spacing: 0.06em; color: #5E97A6; }
+.hfield input, .hfield select { font-size: 15px; color: var(--ink); background: transparent; border: 0; padding: 2px 0; min-height: 26px; }
+.hfield select option { background: #081A23; color: var(--ink); }
+.hfield:focus-within { border-color: var(--glow); }
+.hfield input:focus-visible, .hfield select:focus-visible { outline: none; }
 
-nav.tabs { display: flex; gap: 4px; margin: 20px 0 16px; border-bottom: 1px solid var(--border); }
+nav.tabs { display: flex; flex-wrap: wrap; gap: 10px; margin: 22px 0 14px; }
 nav.tabs button {
-  background: none; border: 0; border-bottom: 2px solid transparent; padding: 10px 14px; cursor: pointer;
-  color: var(--ink-2); font-weight: 500; margin-bottom: -1px;
+  font-weight: 700; font-size: 14px; letter-spacing: 0.1em; text-transform: uppercase; color: #9DCBD7;
+  background: #0A2430; border: 2px solid #2A7F93; border-radius: 3px; padding: 8px 18px; min-height: 44px; cursor: pointer;
 }
-nav.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
-nav.tabs .count { color: var(--muted); font-weight: 400; margin-left: 4px; }
-
-.banner {
-  display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; padding: 10px 14px; border-radius: 10px;
-  background: var(--surface); border: 1px solid var(--border); margin-bottom: 16px;
+nav.tabs button[aria-selected="true"] {
+  color: #D7F3FA; background: linear-gradient(#18566A, #0D3341); border-color: var(--glow);
+  box-shadow: 0 0 8px rgba(63, 195, 224, 0.45), inset 0 0 10px rgba(63, 195, 224, 0.2);
 }
-.banner.baro-here { background: var(--baro-wash); border-color: transparent; }
-.banner strong { font-weight: 600; }
-.banner .muted { color: var(--ink-2); }
+nav.tabs .count { color: var(--muted); font-weight: 500; margin-left: 6px; }
 
-.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 16px; }
-.tile { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; box-shadow: var(--shadow); }
-.tile .label { color: var(--ink-2); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
-.tile .value { font-size: 26px; font-weight: 600; margin-top: 4px; letter-spacing: -0.01em; }
-.tile .detail { color: var(--ink-2); font-size: 13px; margin-top: 2px; }
-
-.filters { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-bottom: 12px; }
-.seg { display: inline-flex; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 2px; }
-.seg button { background: none; border: 0; border-radius: 6px; padding: 5px 10px; cursor: pointer; color: var(--ink-2); }
-.seg button[aria-pressed="true"] { background: var(--accent-wash); color: var(--ink); font-weight: 500; }
-.seg button:disabled { color: var(--muted); cursor: not-allowed; }
-.seg .muted { color: var(--muted); font-weight: 400; }
-.check { display: inline-flex; gap: 6px; align-items: center; color: var(--ink-2); cursor: pointer; }
-.check.disabled { color: var(--muted); cursor: not-allowed; }
-.check .muted { color: var(--muted); }
-
-section.group { margin-bottom: 24px; }
-section.group h2 { font-size: 15px; margin: 0 0 8px; font-weight: 600; }
-section.group h2 .count { color: var(--muted); font-weight: 400; }
-.table-wrap {
-  background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow-x: auto; box-shadow: var(--shadow);
+.seg { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.seg button {
+  font-weight: 600; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: #9DCBD7;
+  background: #0A2430; border: 1px solid #2A7F93; border-radius: 3px; padding: 8px 12px; min-height: 40px; cursor: pointer;
 }
+.seg button[aria-pressed="true"] { color: #D7F3FA; background: linear-gradient(#18566A, #0D3341); border-color: var(--glow);
+  box-shadow: 0 0 8px rgba(63, 195, 224, 0.4); }
+.seg button:disabled { color: #5E8590; border-color: #1E4C59; background: #0A1D25; cursor: not-allowed; }
+.seg .muted { color: var(--muted); font-weight: 400; text-transform: none; }
+.check { display: inline-flex; gap: 10px; align-items: center; color: var(--ink-2); cursor: pointer; min-height: 32px; }
+.check input { appearance: none; -webkit-appearance: none; width: 20px; height: 20px; margin: 0; flex: none; border: 2px solid var(--glow);
+  border-radius: 4px; background: #071820; box-shadow: 0 0 6px rgba(63, 195, 224, 0.4); cursor: pointer; }
+.check input:checked { background: radial-gradient(#5FD6F0 0 5px, #071820 6px); }
+.filter-label { font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; }
+
+/* ---------- windows ---------- */
+.panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(360px, 100%), 1fr)); gap: 26px; margin-bottom: 26px; }
+.hw { position: relative; filter: drop-shadow(0 0 7px rgba(63, 195, 224, 0.5)); margin-bottom: 26px; }
+.panels .hw { margin-bottom: 0; }
+.hw-frame { background: var(--glow); padding: 2px;
+  clip-path: polygon(var(--chamfer) 0, 100% 0, 100% calc(100% - var(--chamfer)), calc(100% - var(--chamfer)) 100%, 0 100%, 0 var(--chamfer)); }
+.hw-panel { background: rgba(8, 26, 35, 0.94); padding: 10px 12px 18px; height: 100%;
+  clip-path: polygon(calc(var(--chamfer) - 1px) 0, 100% 0, 100% calc(100% - var(--chamfer) + 1px), calc(100% - var(--chamfer) + 1px) 100%, 0 100%, 0 calc(var(--chamfer) - 1px)); }
+.panels .hw, .panels .hw-frame { height: 100%; }
+.hatch-tl, .hatch-br { position: absolute; width: 20px; height: 20px; background: repeating-linear-gradient(-45deg, var(--glow) 0 2px, transparent 2px 5px); }
+.hatch-tl { top: 0; left: 0; clip-path: polygon(0 0, 100% 0, 0 100%); }
+.hatch-br { bottom: 0; right: 0; clip-path: polygon(100% 0, 100% 100%, 0 100%); }
+.htitle { border: 1px solid var(--axis); background: #0E2C38; text-align: center; padding: 8px 12px; margin: 0 0 16px;
+  font-weight: 500; font-size: 16px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink);
+  clip-path: polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px); }
+.htitle .count { color: var(--muted); margin-left: 6px; }
+.win-body { padding: 0 6px; display: flex; flex-direction: column; gap: 14px; }
+.big-timer { font-family: Orbitron, sans-serif; font-weight: 700; font-size: 38px; color: var(--ink); text-align: center;
+  text-shadow: 0 0 14px rgba(63, 195, 224, 0.6); letter-spacing: 0.03em; line-height: 1.15; }
+.kicker { font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); text-align: center; }
+.centered { text-align: center; }
+.divider { height: 1px; background: #1E5A6A; margin: 2px 30px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.chip { font-size: 13px; color: var(--ink); background: #0E2C38; border: 1px solid var(--axis); padding: 3px 9px; }
+.meter { height: 12px; background: #071820; border: 1px solid var(--line); padding: 2px; }
+.meter > div { height: 100%; background: linear-gradient(#5FD6F0, #2A9DB8); box-shadow: 0 0 8px rgba(63, 195, 224, 0.7); }
+.meter-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+.intel { background: var(--surface-3); border: 1px solid #17475A; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.intel .label { font-size: 16px; color: var(--ink); }
+.intel .detail { font-size: 13px; color: #8FB3BF; }
+.intel .value { font-family: Orbitron, sans-serif; font-weight: 700; font-size: 26px; color: var(--ink); white-space: nowrap;
+  text-shadow: 0 0 10px rgba(69, 212, 240, 0.45); }
+
+/* ---------- sync bar ---------- */
+.syncbar { position: relative; height: 28px; margin: 0 0 26px; filter: drop-shadow(0 0 6px rgba(63, 195, 224, 0.5)); }
+.syncbar > .frame { position: absolute; inset: 0; background: var(--glow); padding: 2px;
+  clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px); }
+.syncbar .track { position: relative; height: 100%; background: #0A2430;
+  clip-path: polygon(13px 0, 100% 0, 100% calc(100% - 13px), calc(100% - 13px) 100%, 0 100%, 0 13px); }
+.syncbar .fill { position: absolute; inset: 0 auto 0 0; background: linear-gradient(#2A8FA8, #17607A); transition: width 0.6s; }
+.syncbar .text { position: relative; text-align: center; font-weight: 700; font-size: 13px; letter-spacing: 0.1em; line-height: 24px; color: var(--ink); }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; }
 table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
-th, td { padding: 8px 10px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--grid); }
-th:first-child, td:first-child { text-align: left; padding-left: 14px; }
+th, td { padding: 7px 10px; text-align: right; white-space: nowrap; border-bottom: 1px solid #0A1D25; }
+th:first-child, td:first-child { text-align: left; padding-left: 12px; }
 thead th {
-  font-size: 12px; font-weight: 600; color: var(--ink-2); background: var(--surface); position: sticky; top: 0;
-  cursor: pointer; user-select: none; vertical-align: bottom; line-height: 1.25;
+  font-size: 12px; font-weight: 500; color: var(--muted); background: var(--surface-2); border-right: 1px solid var(--line);
+  cursor: pointer; user-select: none; vertical-align: bottom; line-height: 1.25; padding-top: 9px; padding-bottom: 9px;
 }
+thead th:last-child { border-right: 0; }
 thead th:hover { color: var(--ink); }
 thead th.sorted { color: var(--ink); }
-thead th .arrow { color: var(--accent); margin-left: 2px; }
+thead th .arrow { color: var(--cyan); margin-left: 3px; }
 thead th.nosort { cursor: default; }
-tbody tr.row { cursor: pointer; }
-tbody tr.row:hover td { background: var(--surface-2); }
-tbody tr.row.open td { background: var(--surface-2); border-bottom-color: transparent; }
-tbody tr:last-child td { border-bottom: 0; }
-td.name { font-weight: 500; }
-td.name .chev { display: inline-block; width: 12px; color: var(--muted); transition: transform 0.15s; }
+tbody tr.row { cursor: pointer; background: rgba(14, 40, 51, 0.9); color: #CFE6EC; }
+tbody tr.row:nth-child(even) { background: rgba(10, 32, 41, 0.9); }
+tbody tr.row:hover td { background: rgba(31, 155, 194, 0.16); }
+tbody tr.row.open td { background: rgba(20, 58, 72, 0.95); }
+td.name { font-weight: 700; color: var(--ink); }
+td.name .chev { display: inline-block; width: 12px; color: var(--cyan); transition: transform 0.15s; }
 tr.open td.name .chev { transform: rotate(90deg); }
-td.dim { color: var(--ink-2); }
+td.dim { color: var(--muted); }
 .pos { color: var(--good); }
 .neg { color: var(--bad); }
 .zero { color: var(--muted); }
-.low { color: var(--warn); }
-.none { color: var(--bad); }
-.na { color: var(--muted); }
+.low { color: var(--warn); font-weight: 700; }
+.none { color: var(--bad); font-weight: 700; }
+.na { color: #5E8590; }
 .partial { color: var(--warn); }
 
-.badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 999px; margin-left: 6px; vertical-align: 1px; }
+.badge { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; padding: 0 5px; margin-left: 6px; vertical-align: 1px; border: 1px solid currentColor; }
 .badge.pr { color: var(--pr); background: var(--pr-wash); }
 .badge.unv { color: var(--unv); background: var(--unv-wash); }
 .badge.baro { color: var(--baro); background: var(--baro-wash); }
 
-tr.detail > td { background: var(--surface-2); padding: 4px 14px 16px 34px; text-align: left; white-space: normal; }
+tr.detail > td { background: rgba(5, 18, 24, 0.96); padding: 12px 14px 18px 34px; text-align: left; white-space: normal; }
 .detail-grid { display: flex; flex-wrap: wrap; gap: 16px 32px; align-items: flex-start; }
-.detail table { width: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
-.detail table th, .detail table td { padding: 6px 10px; font-size: 13px; }
-.detail table thead th { cursor: default; position: static; }
+.detail table { width: auto; border: 1px solid var(--axis); box-shadow: 0 0 10px rgba(63, 195, 224, 0.25); }
+.detail table th, .detail table td { padding: 6px 12px; font-size: 13px; border-bottom: 1px solid #12323E; }
+.detail table thead th { cursor: default; background: #0E2C38; }
 .facts { display: grid; grid-template-columns: auto auto; gap: 4px 16px; font-size: 13px; align-content: start; }
-.facts dt { color: var(--ink-2); }
-.facts dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.facts dt { color: var(--muted); }
+.facts dd { margin: 0; text-align: right; color: var(--ink); font-variant-numeric: tabular-nums; }
 
 .spark { display: block; overflow: visible; }
-.chart-box {
-  background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px 6px; position: relative;
-  flex: 1 1 440px; max-width: 560px; min-width: 0;
-}
+.chart-box { background: #071820; border: 1px solid var(--axis); padding: 10px 12px 6px; position: relative;
+  flex: 1 1 440px; max-width: 560px; min-width: 0; box-shadow: 0 0 10px rgba(63, 195, 224, 0.2); }
 .chart-box svg { display: block; width: 100%; height: auto; }
-.chart-box .chart-title { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+.chart-box .chart-title { font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink); margin-bottom: 4px; }
 .legend { display: flex; gap: 14px; font-size: 12px; color: var(--ink-2); margin-bottom: 4px; }
 .legend i { display: inline-block; width: 12px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 5px; }
-.legend i.dash { height: 0; border-top: 1.5px dashed var(--muted); }
 .chart text { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
 .chart .label-1 { fill: var(--ink-2); }
 
 #tooltip {
-  position: fixed; pointer-events: none; z-index: 10; background: var(--surface); color: var(--ink);
-  border: 1px solid var(--border); border-radius: 8px; padding: 6px 9px; font-size: 12px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  position: fixed; pointer-events: none; z-index: 10; background: #0A2430; color: var(--ink);
+  border: 1px solid var(--glow); padding: 6px 9px; font-size: 12px; box-shadow: 0 0 12px rgba(63, 195, 224, 0.45);
   font-variant-numeric: tabular-nums; display: none; line-height: 1.5;
 }
-#tooltip .t-date { color: var(--ink-2); }
+#tooltip .t-date { color: var(--muted); }
 #tooltip i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
 
-.state { padding: 48px 16px; text-align: center; color: var(--ink-2); }
-.state .big { font-size: 15px; color: var(--ink); margin-bottom: 4px; }
-.spinner {
-  width: 22px; height: 22px; border: 2.5px solid var(--grid); border-top-color: var(--accent); border-radius: 50%;
-  animation: spin 0.8s linear infinite; margin: 0 auto 12px;
-}
+.banner { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; padding: 10px 14px; margin-bottom: 18px;
+  background: rgba(10, 36, 48, 0.92); border: 1px solid var(--axis); }
+.banner .muted { color: var(--muted); }
+.state { padding: 40px 16px; text-align: center; color: var(--ink-2); }
+.state .big { font-size: 16px; color: var(--ink); margin-bottom: 6px; }
+.spinner { width: 28px; height: 28px; border: 3px solid #12323E; border-top-color: var(--cyan); border-radius: 50%;
+  animation: spin 0.8s linear infinite; margin: 0 auto 14px; box-shadow: 0 0 10px rgba(63, 195, 224, 0.4); }
 @keyframes spin { to { transform: rotate(360deg); } }
 .error { color: var(--bad); }
+.note { font-size: 13px; color: var(--muted); margin: -10px 0 0; }
 
-details.help { margin: 8px 0 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; }
-details.help summary { cursor: pointer; font-weight: 500; }
-details.help dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 12px 0 4px; font-size: 13px; }
-details.help dt { font-weight: 600; }
+details.help { background: var(--surface-3); border: 1px solid #17475A; padding: 8px 12px; }
+details.help summary { cursor: pointer; font-weight: 600; color: var(--ink); min-height: 28px; display: flex; align-items: center; }
+details.help dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 10px 0 4px; font-size: 13px; }
+details.help dt { font-weight: 700; color: var(--ink); }
 details.help dd { margin: 0; color: var(--ink-2); }
-footer { color: var(--muted); font-size: 12px; margin-top: 24px; line-height: 1.7; }
-footer code { font-size: 11px; }
+footer { color: var(--muted); font-size: 12px; line-height: 1.7; }
+footer code { font-size: 11px; color: var(--ink-2); }
 
 @media (max-width: 640px) {
-  .tile .value { font-size: 22px; }
-  input[type="search"] { width: 100%; }
-  .filters { gap: 8px; }
+  .logo { font-size: 30px; }
+  .big-timer { font-size: 30px; }
+  .intel .value { font-size: 22px; }
   details.help dl { grid-template-columns: 1fr; gap: 2px; }
   details.help dd { margin-bottom: 8px; }
   tr.detail > td { padding-left: 14px; }
+  :root { --chamfer: 16px; }
 }
-@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2.4s; } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2.4s; } .syncbar .fill { transition: none; } }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header class="top">
     <div>
-      <h1>Warframe Set Arbitrage</h1>
-      <p class="sub">Live spreads from players currently in game on warframe.market</p>
+      <h1 class="logo">WF ARBITRAGE</h1>
+      <div class="logo-sub">MARKET TERMINAL</div>
     </div>
     <div class="controls">
-      <label>Platform
+      <label class="hfield"><span>Platform</span>
         <select id="platform">
           <option value="pc">PC</option><option value="ps4">PlayStation</option><option value="xbox">Xbox</option>
           <option value="switch">Switch</option><option value="mobile">Mobile</option>
         </select>
       </label>
-      <label title="Average the best N orders per side, which ignores bait listings">Depth
+      <label class="hfield" title="Average the best N orders per side, which ignores bait listings"><span>Depth</span>
         <select id="depth"><option value="1">Best order</option><option value="3">Top 3 avg</option><option value="5">Top 5 avg</option></select>
       </label>
       <button class="btn" id="refresh" title="Reload the current tab">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
         Refresh
-      </button>
-      <button class="btn icon-btn" id="theme" title="Toggle light / dark" aria-label="Toggle light or dark theme">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
       </button>
     </div>
   </header>
@@ -276,6 +268,8 @@ footer code { font-size: 11px; }
     <button role="tab" data-tab="sets" aria-selected="true">Prime sets<span class="count" id="count-sets"></span></button>
     <button role="tab" data-tab="mods" aria-selected="false">Primed mods<span class="count" id="count-mods"></span></button>
   </nav>
+
+  <div class="syncbar" id="syncbar" role="status"><div class="frame"><div class="track"><div class="fill" id="sync-fill" style="width:0"></div><div class="text" id="sync-text">CONNECTING…</div></div></div></div>
 
   <main id="view"></main>
 
@@ -294,7 +288,7 @@ const STORE_KEY = "wfsa-ui";
 function loadPrefs() { try { return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch { return {}; } }
 function savePrefs() { try { localStorage.setItem(STORE_KEY, JSON.stringify(prefs)); } catch {} }
 const prefs = Object.assign({
-  tab: "sets", platform: "pc", depth: "1", theme: null,
+  tab: "sets", platform: "pc", depth: "1",
   sets: { search: "", source: "all", kind: "all", all: false, sort: "delta_wts", dir: -1 },
   mods: { search: "", baro: "all", all: false, sort: "dip", dir: 1 },
 }, loadPrefs());
@@ -448,31 +442,35 @@ function renderSets() {
   const best = [...d.sets].filter(s => s.delta_wts != null).sort((a, b) => b.delta_wts - a.delta_wts)[0];
   const bestSell = [...d.sets].filter(s => s.delta_wtb != null).sort((a, b) => a.delta_wtb - b.delta_wtb)[0];
   const liquid = [...d.sets].filter(s => s.set.vol_48h != null).sort((a, b) => b.set.vol_48h - a.set.vol_48h)[0];
-  const banner = `<div class="banner">
-    ${d.pr_expiry ? `<span><strong>Prime Resurgence</strong> rotation ends ${when(d.pr_expiry)} <span class="muted">(${rel(d.pr_expiry)})</span></span>` : ""}
-    ${d.drops_updated ? `<span class="muted">Drop tables updated ${new Date(d.drops_updated).toLocaleDateString()}</span>` : ""}
-  </div>`;
-  const tiles = `<div class="tiles">
+  const inRotation = d.sets.filter(s => s.pr).map(s => s.name);
+  const prWin = win("Prime Resurgence", `
+    ${d.pr_expiry ? `<div><div class="kicker">Varzia's rotation ends in</div>
+      <div class="big-timer" role="timer">${rel(d.pr_expiry).replace("in ", "").toUpperCase()}</div>
+      <div class="centered">${when(d.pr_expiry)}</div></div>` : `<div class="kicker">Rotation end unknown</div>`}
+    <div class="divider"></div>
+    <div class="kicker">In this rotation</div>
+    <div class="chips">${inRotation.map(n => `<span class="chip">${esc(n)}</span>`).join("") || '<span class="na">None tracked</span>'}</div>
+    ${d.drops_updated ? `<div class="centered note" style="margin:0">Drop tables updated ${new Date(d.drops_updated).toLocaleDateString()}</div>` : ""}`);
+  const flips = win("Best flips", `
     ${tile("Best build & sell", best ? signed(best.delta_wts, "p") : "—", best ? `${esc(best.name)}: parts ${fmt(best.parts_wts.total)}p → set ${fmt(best.set.wts)}p` : "")}
     ${tile("Best to split", bestSell && bestSell.delta_wtb < 0 ? signed(bestSell.delta_wtb, "p") : "—", bestSell && bestSell.delta_wtb < 0 ? `${esc(bestSell.name)}: buyers pay more for parts` : "No set where parts outsell the set")}
-    ${tile("Most traded set", liquid ? `${liquid.set.vol_48h}` : "—", liquid ? `${esc(liquid.name)}, trades in 48h` : "")}
-  </div>`;
-  const filters = `<div class="filters">
-    <input type="search" id="search-sets" placeholder="Filter sets…" value="${esc(st.search)}" aria-label="Filter sets by name">
-    ${seg("sets", "source", [["all", "All"], ["pr", "Prime Resurgence"], ["unvaulted", "Unvaulted"]])}
-    ${seg("sets", "kind", [["all", "All types"], ["frame", "Warframes"], ["weapon", "Weapons"]])}
+    ${tile("Most traded set", liquid ? `${liquid.set.vol_48h}` : "—", liquid ? `${esc(liquid.name)}, trades in 48h` : "")}`);
+  const filters = win("Filters", `
+    <label class="hfield"><span>Search sets</span><input type="search" id="search-sets" placeholder="e.g. Ivara" value="${esc(st.search)}"></label>
+    <div><p class="filter-label">Source</p>${seg("sets", "source", [["all", "All"], ["pr", "Prime Resurgence"], ["unvaulted", "Unvaulted"]])}</div>
+    <div><p class="filter-label">Type</p>${seg("sets", "kind", [["all", "All types"], ["frame", "Warframes"], ["weapon", "Weapons"]])}</div>
     <label class="check" title="Include the permanent relic pool and permanently unvaulted primes (refetches)">
       <input type="checkbox" id="all-sets" ${st.all ? "checked" : ""}> All unvaulted primes</label>
-  </div>`;
+    ${help("sets")}`);
   const groups = [["frame", "Warframes"], ["weapon", "Weapons"]].map(([kind, label]) => {
     const g = sortRows(rows.filter(s => s.kind === kind), setCols, st);
     if (!g.length) return "";
-    return `<section class="group"><h2>${label} <span class="count">${g.length}</span></h2>
-      <div class="table-wrap"><table>${thead(setCols, st, "sets")}<tbody>${g.map(setRow).join("")}</tbody></table></div></section>`;
+    return win(`${label} <span class="count">${g.length}</span>`,
+      `<div class="table-wrap"><table>${thead(setCols, st, "sets")}<tbody>${g.map(setRow).join("")}</tbody></table></div>`);
   }).join("");
   const hidden = d.hidden.length && !st.all
-    ? `<p class="sub" style="font-size:13px">Hidden (not in their first Prime Access cycle): ${esc(d.hidden.join(", "))}.</p>` : "";
-  return banner + tiles + help("sets") + filters + (groups || emptyFilter()) + hidden;
+    ? `<p class="note">Hidden (not in their first Prime Access cycle): ${esc(d.hidden.join(", "))}.</p>` : "";
+  return `<div class="panels">${prWin}${flips}${filters}</div>` + (groups || emptyFilter()) + hidden;
 }
 
 // ---------- mods tab ----------
@@ -542,39 +540,49 @@ function modRow(m) {
 function renderMods() {
   const d = data.mods, st = prefs.mods, b = d.baro, f = baroFilter();
   const rows = sortRows(modsFiltered(), modCols, st);
-  let banner;
+  const stripPrimed = n => n.replace(/^Primed /, "");
+  let baroBody;
   if (b.active) {
-    banner = `<div class="banner baro-here"><span><strong>Baro Ki'Teer is at ${esc(b.location)}</strong> until ${when(b.expiry)}
-      <span class="muted">(${rel(b.expiry).replace("in ", "")} left)</span></span>
-      <span>${b.primed_in_stock.length ? "Primed mods in stock: " + esc(b.primed_in_stock.join(", ")) : "No primed mods in stock"}</span></div>`;
+    baroBody = `<div><div class="kicker">Baro Ki'Teer is here · leaves in</div>
+      <div class="big-timer" role="timer">${rel(b.expiry).replace("in ", "").toUpperCase()}</div>
+      <div class="centered">${esc(b.location)} · until ${when(b.expiry)}</div></div>
+      <div class="divider"></div>
+      <div class="kicker">Primed mods in stock</div>
+      <div class="chips">${b.primed_in_stock.map(n => `<span class="chip">${esc(stripPrimed(n))}</span>`).join("") || '<span class="na">None this visit</span>'}</div>`;
   } else if (b.activation && new Date(b.activation) > Date.now()) {
-    banner = `<div class="banner"><span><strong>Baro Ki'Teer</strong> arrives at ${esc(b.location)} ${when(b.activation)}
-      <span class="muted">(${rel(b.activation)})</span></span>
-      <span class="muted">${b.last_visit
-        ? `Last visit ${shortDate(b.last_visit)} brought ${b.last_visit_primed.length} primed mods.`
-        : "Primed mods he brings usually dip in price while he's here."}</span></div>`;
+    // How far through the gap between his last visit and the next one we are.
+    const start = b.last_visit ? Date.parse(b.last_visit + "T13:00:00Z") : null;
+    const cycle = start ? Math.min(Math.max((Date.now() - start) / (Date.parse(b.activation) - start), 0), 1) : null;
+    baroBody = `<div><div class="kicker">Baro Ki'Teer arrives in</div>
+      <div class="big-timer" role="timer">${rel(b.activation).replace("in ", "").toUpperCase()}</div>
+      <div class="centered">${esc(b.location)} · ${when(b.activation)}</div></div>
+      ${cycle != null ? `<div><div class="meter-label"><span>Since his last visit</span><span>${Math.round(cycle * 100)}%</span></div>
+        <div class="meter" role="img" aria-label="${Math.round(cycle * 100)}% of the way to his next visit"><div style="width:${(cycle * 100).toFixed(1)}%"></div></div></div>` : ""}
+      ${b.last_visit ? `<div class="divider"></div>
+        <div class="kicker">Last visit ${shortDate(b.last_visit)} · ${b.last_visit_primed.length} primed mods</div>
+        <div class="chips">${b.last_visit_primed.map(n => `<span class="chip">${esc(stripPrimed(n))}</span>`).join("")}</div>` : ""}`;
   } else {
-    banner = `<div class="banner"><span class="muted">Baro's next visit is unknown.</span></div>`;
+    baroBody = `<div class="kicker">Baro's next visit is unknown</div>`;
   }
+  const baroWin = win("Void Trader", baroBody);
   const dips = d.mods.filter(m => m.dip != null).sort((a, b) => a.dip - b.dip);
   const endo = d.mods.filter(m => m.plat_per_kendo != null).sort((a, b) => b.plat_per_kendo - a.plat_per_kendo)[0];
-  const tiles = `<div class="tiles">
+  const intel = win("Market intel", `
     ${tile("Deepest dip", dips[0] ? signed(Math.round(dips[0].dip), "%", true) : "—", dips[0] ? `${esc(dips[0].name)}: ${fmt(dips[0].r0.wts)}p vs ${fmt(dips[0].r0_stats.median_90d)}p usual` : "")}
-    ${tile("Below usual price", `${dips.filter(m => m.dip <= -10).length}`, "mods at least 10% under their 90d median")}
-    ${tile("Best maxing return", endo ? `${fmt(Math.round(endo.plat_per_kendo * 10) / 10)}p` : "—", endo ? `per 1k endo: ${esc(endo.name)} (+${fmt(endo.premium)}p)` : "")}
-  </div>`;
-  const filters = `<div class="filters">
-    <input type="search" id="search-mods" placeholder="Filter mods…" value="${esc(st.search)}" aria-label="Filter mods by name">
-    <div class="seg" role="group" aria-label="Baro filter">
+    ${tile("Below usual price", `${dips.filter(m => m.dip <= -10).length}`, "Mods at least 10% under their 90-day median")}
+    ${tile("Best maxing return", endo ? `${fmt(Math.round(endo.plat_per_kendo * 10) / 10)}p` : "—", endo ? `Per 1k endo: ${esc(endo.name)} (+${fmt(endo.premium)}p)` : "")}`);
+  const filters = `
+    <label class="hfield"><span>Search mods</span><input type="search" id="search-mods" placeholder="e.g. Reach" value="${esc(st.search)}"></label>
+    <div><p class="filter-label">Baro</p><div class="seg" role="group" aria-label="Baro filter">
       <button data-seg="mods:baro:all" aria-pressed="${f === "all"}">All mods</button>
       <button data-seg="mods:baro:now" aria-pressed="${f === "now"}" ${b.active ? "title=\"Baro's current stock\""
         : `disabled title="Baro's stock is only known while he's visiting"`}>Baro now${b.active || !b.activation ? "" : ` <span class="muted">${rel(b.activation)}</span>`}</button>
       <button data-seg="mods:baro:last" aria-pressed="${f === "last"}" ${b.last_visit
         ? `title="Primed mods Baro brought on his last visit"` : "disabled"}>Last Baro${b.last_visit ? ` <span class="muted">${shortDate(b.last_visit)}</span>` : ""}</button>
-    </div>
+    </div></div>
     <label class="check" title="Every primed mod instead of the steady-demand watchlist (refetches)">
       <input type="checkbox" id="all-mods" ${st.all ? "checked" : ""}> All primed mods</label>
-  </div>`;
+    ${help("mods")}`;
   let empty = emptyFilter();
   const listed = f === "now" ? b.primed_in_stock : b.last_visit_primed;
   if (f !== "all" && !d.mods.some(m => f === "now" ? m.in_baro : m.in_last_baro)) {
@@ -582,13 +590,15 @@ function renderMods() {
     const why = listed.length
       ? `He brought ${esc(listed.join(", "))}, which warframe.market doesn't list as tradable.`
       : `Baro didn't bring any primed mods ${visit}.`;
-    empty = `<div class="table-wrap"><div class="state"><div class="big">No tradable primed mods ${visit}</div>
-      <div>${why} Pick “All mods” to see the watchlist.</div></div></div>`;
+    empty = win("Primed mods", `<div class="state"><div class="big">No tradable primed mods ${visit}</div>
+      <div>${why} Pick “All mods” to see the watchlist.</div></div>`);
   }
+  const title = f === "last" ? `Primed mods · last Baro ${shortDate(b.last_visit)}` : f === "now" ? "Primed mods · Baro's stock" : "Primed mods";
   const table = rows.length
-    ? `<div class="table-wrap"><table>${thead(modCols, st, "mods")}<tbody>${rows.map(modRow).join("")}</tbody></table></div>`
+    ? win(`${title} <span class="count">${rows.length}</span>`,
+      `<div class="table-wrap"><table>${thead(modCols, st, "mods")}<tbody>${rows.map(modRow).join("")}</tbody></table></div>`)
     : empty;
-  return banner + tiles + help("mods") + filters + table;
+  return `<div class="panels">${baroWin}${intel}${win("Filters", filters)}</div>` + table;
 }
 
 // ---------- charts ----------
@@ -684,10 +694,14 @@ document.addEventListener("pointermove", e => {
 });
 
 // ---------- shared bits ----------
-const tile = (label, value, detail) => `<div class="tile"><div class="label">${label}</div><div class="value">${value}</div><div class="detail">${detail}</div></div>`;
+// A holo window: glowing chamfered frame, hatched corners and a title bar.
+const win = (title, body) => `<section class="hw"><div class="hw-frame"><div class="hw-panel">
+  <h2 class="htitle">${title}</h2><div class="win-body">${body}</div></div></div>
+  <i class="hatch-tl" aria-hidden="true"></i><i class="hatch-br" aria-hidden="true"></i></section>`;
+const tile = (label, value, detail) => `<div class="intel"><div><div class="label">${label}</div><div class="detail">${detail}</div></div><div class="value">${value}</div></div>`;
 const seg = (tab, key, opts) => `<div class="seg" role="group">${opts.map(([v, l]) =>
   `<button data-seg="${tab}:${key}:${v}" aria-pressed="${prefs[tab][key] === v}">${l}</button>`).join("")}</div>`;
-const emptyFilter = () => `<div class="table-wrap"><div class="state">Nothing matches those filters.</div></div>`;
+const emptyFilter = () => win("No results", `<div class="state">Nothing matches those filters.</div>`);
 
 const HELP = {
   sets: [
@@ -712,13 +726,13 @@ const help = tab => `<details class="help"><summary>How to read this</summary><d
 
 function renderState(tab) {
   if (status[tab] === "error" && !data[tab]) {
-    return `<div class="table-wrap"><div class="state"><div class="big error">Couldn't load ${tab === "sets" ? "prime sets" : "primed mods"}</div>
-      <div>${esc(errors[tab] || "")}</div><p><button class="btn" data-retry="${tab}">Try again</button></p></div></div>`;
+    return win("Link error", `<div class="state"><div class="big error">Couldn't load ${tab === "sets" ? "prime sets" : "primed mods"}</div>
+      <div>${esc(errors[tab] || "")}</div><p><button class="btn" data-retry="${tab}">Try again</button></p></div>`);
   }
   const expect = tab === "sets" ? "up to about 2 minutes" : "about 20 seconds";
-  return `<div class="table-wrap"><div class="state"><div class="spinner"></div>
+  return win("Establishing link", `<div class="state"><div class="spinner"></div>
     <div class="big">Fetching live prices from warframe.market… <span id="elapsed">0s</span></div>
-    <div>warframe.market allows ~3 requests/second, so a fresh fetch takes ${expect}. Results are then cached for 10 minutes.</div></div></div>`;
+    <div>warframe.market allows ~3 requests/second, so a fresh fetch takes ${expect}. Results are then cached for 10 minutes.</div></div>`);
 }
 
 // ---------- render ----------
@@ -745,8 +759,29 @@ function renderFooter() {
   const d = data[prefs.tab];
   $("#footer").innerHTML = `${d ? `Data from ${new Date(d.generated_at).toLocaleTimeString()} (${d.platform}, ${d.depth > 1 ? `avg of top ${d.depth}` : "best order"}), cached for 10 minutes. ` : ""}
     Prices: top 5 buy/sell orders from players in game, <code>api.warframe.market</code>. Volume: closed-trade statistics.
-    Relics: DE's drop tables via <code>drops.warframestat.us</code>. Varzia and Baro: <code>api.warframestat.us</code>.
+    Relics: DE's drop tables via <code>drops.warframestat.us</code>. Varzia and Baro: <code>api.warframestat.us</code> and the Warframe wiki.
+    Backdrop: Warframe's Corpus menu background. Fan-made, not affiliated with Digital Extremes.
     <a href="https://github.com/LucasRibeiroCaetano/warframe-set-arbitrage">Source</a>`;
+  renderSync();
+}
+// The sync bar fills up as the cached data ages towards the 10-minute refresh.
+const CACHE_MS = 10 * 60 * 1000;
+function renderSync() {
+  const tab = prefs.tab, d = data[tab], fill = $("#sync-fill"), text = $("#sync-text");
+  if (status[tab] === "loading") {
+    const s = Math.round((Date.now() - started[tab].t) / 1000);
+    fill.style.width = Math.min(s / (tab === "sets" ? 90 : 20), 1) * 100 + "%";
+    text.textContent = `FETCHING LIVE PRICES… ${s}S`;
+    return;
+  }
+  if (!d) { fill.style.width = "0"; text.textContent = status[tab] === "error" ? "LINK ERROR" : "CONNECTING…"; return; }
+  const age = Date.now() - Date.parse(d.generated_at);
+  const left = Math.max(CACHE_MS - age, 0);
+  const t = new Date(d.generated_at).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  fill.style.width = Math.min(age / CACHE_MS, 1) * 100 + "%";
+  text.textContent = left
+    ? `SYNCED ${t} · NEXT REFRESH IN ${Math.floor(left / 60000)}:${String(Math.floor(left / 1000) % 60).padStart(2, "0")}`
+    : `SYNCED ${t} · NEWER PRICES AVAILABLE, PRESS REFRESH`;
 }
 
 // ---------- events ----------
@@ -798,22 +833,14 @@ document.addEventListener("change", e => {
   }
 });
 $("#refresh").addEventListener("click", () => load(prefs.tab));
-$("#theme").addEventListener("click", () => {
-  const dark = document.documentElement.dataset.theme
-    ? document.documentElement.dataset.theme === "dark"
-    : matchMedia("(prefers-color-scheme: dark)").matches;
-  prefs.theme = dark ? "light" : "dark"; savePrefs();
-  document.documentElement.dataset.theme = prefs.theme;
-});
 
 // ---------- start ----------
-if (prefs.theme) document.documentElement.dataset.theme = prefs.theme;
 $("#platform").value = prefs.platform;
 $("#depth").value = prefs.depth;
 render();
 // Load the visible tab first, then prefetch the other one.
 load(prefs.tab).then(() => load(prefs.tab === "sets" ? "mods" : "sets"));
-setInterval(() => { if (data[prefs.tab]) renderFooter(); }, 60000);
+setInterval(renderSync, 1000);
 </script>
 </body>
 </html>

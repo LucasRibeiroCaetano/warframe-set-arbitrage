@@ -16,7 +16,9 @@ show everything that drops. Warframes and weapons are shown in separate tables.
 **Live: https://warframe-set-arbitrage.vercel.app**
 
 The web dashboard has two tabs: prime sets and primed mods around Baro's visits. It has sortable tables, per-set part
-breakdowns, and 90-day price charts for each mod. Run it locally with:
+breakdowns, and 90-day price charts for each mod. It uses a dark holo-terminal look: glowing chamfered windows over a
+blurred crop of Warframe's Corpus menu background (from the Warframe wiki, with the logo and login form cropped out).
+Run it locally with:
 
 ```bash
 uv run wfspread web                    # http://127.0.0.1:8000, opens a browser tab
