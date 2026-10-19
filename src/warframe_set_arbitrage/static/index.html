@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Michroma&family=Titillium+Web:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 /* Holo terminal: dark teal windows with glowing cyan chamfered frames over a blurred Warframe backdrop. */
 :root {
@@ -41,6 +41,10 @@
   --unv: #7FE0B8;
   --unv-wash: rgba(127, 224, 184, 0.12);
   --chamfer: 22px;
+  /* Type: display for the logo and window titles, UI for text and controls, data for numbers and timers. */
+  --font-display: Michroma, "Titillium Web", system-ui, sans-serif;
+  --font-ui: "Titillium Web", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, Consolas, monospace;
 }
 
 * { box-sizing: border-box; }
@@ -49,7 +53,7 @@ body {
   margin: 0;
   background: var(--page) url(backdrop.jpg) center top / cover no-repeat fixed;
   color: var(--ink-2);
-  font: 15px/1.45 "Exo 2", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font: 15px/1.45 var(--font-ui);
 }
 button, input, select { font: inherit; color: inherit; }
 a { color: var(--cyan); }
@@ -65,9 +69,9 @@ a:hover { color: #BDF2FD; }
 
 /* ---------- header ---------- */
 header.top { display: flex; flex-wrap: wrap; gap: 16px 28px; align-items: center; justify-content: space-between; }
-.logo { font-family: Orbitron, sans-serif; font-weight: 900; font-size: 40px; line-height: 1; letter-spacing: 0.04em; color: #6FD8EE;
+.logo { font-family: var(--font-display); font-weight: 400; font-size: 33px; line-height: 1.05; letter-spacing: 0.06em; color: #6FD8EE;
   text-shadow: 0 0 18px rgba(63, 195, 224, 0.7), 0 0 2px #BDF2FD; margin: 0; }
-.logo-sub { font-family: Orbitron, sans-serif; font-weight: 700; font-size: 12px; letter-spacing: 0.42em; color: #3E8EA2; margin-top: 4px; padding-left: 3px; }
+.logo-sub { font-family: var(--font-display); font-weight: 400; font-size: 11px; letter-spacing: 0.42em; color: #3E8EA2; margin-top: 7px; padding-left: 3px; }
 .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: stretch; }
 /* Live countdown to Baro's next visit (or his departure while he's here), shown on every tab. */
 .baro-timer { display: grid; grid-template-columns: auto; justify-items: center; gap: 0; padding: 6px 18px 7px; min-height: 44px;
@@ -78,7 +82,7 @@ header.top { display: flex; flex-wrap: wrap; gap: 16px 28px; align-items: center
 .baro-timer:hover { border-color: #7FE3F7; box-shadow: 0 0 14px rgba(63, 195, 224, 0.6), inset 0 0 12px rgba(63, 195, 224, 0.2); }
 .baro-timer:active { transform: translateY(1px); box-shadow: inset 0 0 14px rgba(63, 195, 224, 0.4); }
 .bt-label { font-size: 11px; font-weight: 700; letter-spacing: 0.14em; color: var(--muted); }
-.bt-time { font-family: Orbitron, sans-serif; font-weight: 700; font-size: 22px; letter-spacing: 0.06em; color: var(--ink);
+.bt-time { font-family: var(--font-data); font-weight: 500; font-size: 21px; letter-spacing: 0.02em; color: var(--ink);
   text-shadow: 0 0 12px rgba(63, 195, 224, 0.6); font-variant-numeric: tabular-nums; line-height: 1.2; }
 .bt-sub { font-size: 12px; color: var(--muted); }
 .timers { display: flex; flex-wrap: wrap; gap: 10px; }
@@ -201,13 +205,13 @@ nav.tabs button[aria-selected="true"] .count { color: #8FD9EA; }
 .hatch-tl, .hatch-br { position: absolute; width: 20px; height: 20px; background: repeating-linear-gradient(-45deg, var(--glow) 0 2px, transparent 2px 5px); }
 .hatch-tl { top: 0; left: 0; clip-path: polygon(0 0, 100% 0, 0 100%); }
 .hatch-br { bottom: 0; right: 0; clip-path: polygon(100% 0, 100% 100%, 0 100%); }
-.htitle { border: 1px solid var(--axis); background: #0E2C38; text-align: center; padding: 8px 12px; margin: 0 0 16px;
-  font-weight: 500; font-size: 16px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink);
+.htitle { border: 1px solid var(--axis); background: #0E2C38; text-align: center; padding: 9px 12px; margin: 0 0 16px;
+  font-family: var(--font-display); font-weight: 400; font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink);
   clip-path: polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px); }
-.htitle .count { color: var(--muted); margin-left: 6px; }
+.htitle .count { color: var(--muted); margin-left: 6px; font-family: var(--font-data); font-size: 14px; letter-spacing: 0; }
 .win-body { padding: 0 6px; display: flex; flex-direction: column; gap: 14px; }
-.big-timer { font-family: Orbitron, sans-serif; font-weight: 700; font-size: 38px; color: var(--ink); text-align: center;
-  text-shadow: 0 0 14px rgba(63, 195, 224, 0.6); letter-spacing: 0.03em; line-height: 1.15; }
+.big-timer { font-family: var(--font-data); font-weight: 500; font-size: 40px; color: var(--ink); text-align: center;
+  text-shadow: 0 0 14px rgba(63, 195, 224, 0.6); letter-spacing: 0; line-height: 1.15; }
 .kicker { font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); text-align: center; }
 .centered { text-align: center; }
 .divider { height: 1px; background: #1E5A6A; margin: 2px 30px; }
@@ -219,7 +223,7 @@ nav.tabs button[aria-selected="true"] .count { color: #8FD9EA; }
 .intel { background: var(--surface-3); border: 1px solid #17475A; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .intel .label { font-size: 16px; color: var(--ink); }
 .intel .detail { font-size: 13px; color: #8FB3BF; }
-.intel .value { font-family: Orbitron, sans-serif; font-weight: 700; font-size: 26px; color: var(--ink); white-space: nowrap;
+.intel .value { font-family: var(--font-data); font-weight: 500; font-size: 26px; color: var(--ink); white-space: nowrap;
   text-shadow: 0 0 10px rgba(69, 212, 240, 0.45); }
 
 /* ---------- sync bar ---------- */
@@ -256,6 +260,8 @@ tbody tr.row:hover td:first-child, tbody tr.row.open td:first-child, tbody tr.ro
 tbody tr.row:active td { background: rgba(31, 155, 194, 0.26); }
 tbody tr.row:focus-visible { outline: 2px solid #8FE9FB; outline-offset: -2px; }
 tbody tr.row.open td { background: rgba(20, 58, 72, 0.95); }
+tbody td { font-family: var(--font-data); font-size: 14px; }
+td.name, .detail td:first-child { font-family: var(--font-ui); font-size: 15px; }
 td.name { font-weight: 700; color: var(--ink); }
 td.name .chev { display: inline-block; width: 12px; color: var(--cyan); transition: transform 0.15s; }
 tr.open td.name .chev { transform: rotate(90deg); }
@@ -295,7 +301,7 @@ tr.detail > td { background: rgba(5, 18, 24, 0.96); padding: 12px 14px 18px 34px
 .chart-box .chart-title { font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink); margin-bottom: 4px; }
 .legend { display: flex; gap: 14px; font-size: 12px; color: var(--ink-2); margin-bottom: 4px; }
 .legend i { display: inline-block; width: 12px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 5px; }
-.chart text { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.chart text { fill: var(--muted); font-family: var(--font-data); font-size: 11px; font-variant-numeric: tabular-nums; }
 .chart .label-1 { fill: var(--ink-2); }
 
 #tooltip {
@@ -334,7 +340,7 @@ footer { color: var(--muted); font-size: 12px; line-height: 1.7; }
 footer code { font-size: 11px; color: var(--ink-2); }
 
 @media (max-width: 640px) {
-  .logo { font-size: 30px; }
+  .logo { font-size: 25px; }
   .big-timer { font-size: 30px; }
   .intel .value { font-size: 22px; }
   details.help dl { grid-template-columns: 1fr; gap: 2px; }
