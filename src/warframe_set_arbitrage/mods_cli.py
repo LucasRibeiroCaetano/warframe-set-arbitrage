@@ -8,7 +8,7 @@ from rich.console import Console
 from rich.rule import Rule
 from rich.table import Table
 
-from .cli import fetch_progress, fmt, fmt_delta, fmt_vol
+from .cli import fetch_progress, fmt, fmt_delta, fmt_vol, market_url
 from .http import Http
 from .mods import Baro, ModSpread, baro_status, fetch_mod_spreads, primed_mods
 
@@ -176,10 +176,10 @@ def write_csv(path: str, spreads: list[ModSpread]) -> None:
         w = csv.writer(fh)
         w.writerow(["mod", "max_rank", "in_baro", "last_baro", "baro_visits", "r0_wts", "r0_wtb", "r0_median_90d", "r0_low_90d", "r0_high_90d",
                     "dip_pct", "r0_avg_90d", "vs_avg_pct", "r0_vol_48h", "max_wts", "max_wtb", "max_vol_48h", "premium", "endo_to_max",
-                    "credits_to_max", "plat_per_1k_endo"])
+                    "credits_to_max", "plat_per_1k_endo", "market_url"])
         for s in spreads:
             r0, rmax = s.rank_stats(0), s.rank_stats(s.mod.max_rank)
             w.writerow([s.mod.name, s.mod.max_rank, s.mod.in_baro, s.mod.last_baro, s.mod.baro_visits, s.r0.wts, s.r0.wtb, r0 and r0.median_90d,
                         r0 and r0.low_90d, r0 and r0.high_90d, s.dip, r0 and r0.avg_90d, s.vs_avg, r0 and r0.vol_48h, s.rmax.wts, s.rmax.wtb,
                         rmax and rmax.vol_48h, s.premium, s.mod.endo_to_max, s.mod.credits_to_max,
-                        s.plat_per_kendo])
+                        s.plat_per_kendo, market_url(s.mod.slug)])

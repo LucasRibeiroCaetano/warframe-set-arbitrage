@@ -255,6 +255,11 @@ td.name { font-weight: 700; color: var(--ink); }
 td.name .chev { display: inline-block; width: 12px; color: var(--cyan); transition: transform 0.15s; }
 tr.open td.name .chev { transform: rotate(90deg); }
 td.dim { color: var(--muted); }
+td.mkt-cell, .detail td.mkt-cell { text-align: center; padding-top: 2px; padding-bottom: 2px; }
+a.mkt { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; color: var(--cyan);
+  border: 1px solid transparent; border-radius: 3px; transition: color 0.15s, border-color 0.15s, box-shadow 0.15s, background 0.15s; }
+a.mkt:hover { color: #FFFFFF; border-color: #4FB8D0; background: #0E2C38; box-shadow: 0 0 10px rgba(63, 195, 224, 0.45); }
+a.mkt:active { transform: translateY(1px); box-shadow: inset 0 0 10px rgba(63, 195, 224, 0.45); }
 .pos { color: var(--good); }
 .neg { color: var(--bad); }
 .zero { color: var(--muted); }
@@ -548,6 +553,7 @@ const setCols = [
   { key: "min_vol", label: "Min part<br>vol 48h", sort: r => r.min_part_vol_48h, title: "48h volume of the least-traded part" },
   { key: "delta_wts", label: "Δ WTS", title: "Set WTS − Parts WTS Σ. + → buy parts, build and sell the set" },
   { key: "delta_wtb", label: "Δ WTB", title: "Set WTB − Parts WTB Σ. − → buyers pay more for loose parts" },
+  { key: "market", label: "Market", nosort: true },
 ];
 const openSets = new Set();
 
@@ -640,17 +646,20 @@ function setRow(s) {
     <td>${fmt(s.set.wts)}</td><td>${fmt(s.set.wtb)}</td><td class="dim">${fmt(s.set.spread)}</td>
     <td title="${s.set.avg_90d != null ? `90d average ${fmt(Math.round(s.set.avg_90d * 10) / 10)}p` : ""}">${signed(s.vs_avg == null ? null : Math.round(s.vs_avg), "%", true)}</td>
     <td>${vol(s.set.vol_48h)}</td><td>${partsSum(s.parts_wts)}</td><td>${partsSum(s.parts_wtb)}</td>
-    <td>${vol(s.min_part_vol_48h)}</td><td>${signed(s.delta_wts)}</td><td>${signed(s.delta_wtb)}</td></tr>`;
+    <td>${vol(s.min_part_vol_48h)}</td><td>${signed(s.delta_wts)}</td><td>${signed(s.delta_wtb)}</td>
+    <td class="mkt-cell">${marketLink(s.slug, `${s.name} set`)}</td></tr>`;
   if (!open) return row;
   const parts = s.parts.map(p => `<tr><td>${esc(p.name)}</td><td>${p.qty}</td><td>${fmt(p.wts)}</td><td>${fmt(p.wtb)}</td>
     <td class="dim">${fmt(p.spread)}</td><td class="dim">${p.sellers}/${p.buyers}</td><td>${vol(p.vol_48h)}</td>
-    <td>${p.vol_7d ?? "—"}</td><td class="dim">${fmt(p.avg_48h)}</td></tr>`).join("");
+    <td>${p.vol_7d ?? "—"}</td><td class="dim">${fmt(p.avg_48h)}</td>
+    <td class="mkt-cell">${marketLink(p.slug, p.name)}</td></tr>`).join("");
   const setLine = `<tr><td><strong>Set</strong></td><td></td><td>${fmt(s.set.wts)}</td><td>${fmt(s.set.wtb)}</td>
     <td class="dim">${fmt(s.set.spread)}</td><td class="dim">${s.set.sellers}/${s.set.buyers}</td><td>${vol(s.set.vol_48h)}</td>
-    <td>${s.set.vol_7d ?? "—"}</td><td class="dim">${fmt(s.set.avg_48h)}</td></tr>`;
+    <td>${s.set.vol_7d ?? "—"}</td><td class="dim">${fmt(s.set.avg_48h)}</td>
+    <td class="mkt-cell">${marketLink(s.slug, `${s.name} set`)}</td></tr>`;
   return row + `<tr class="detail"><td colspan="${setCols.length}"><div class="detail">
     <table><thead><tr><th>Part</th><th>Qty</th><th>WTS</th><th>WTB</th><th>Spread</th><th>Sellers/<br>buyers</th>
-    <th>Vol 48h</th><th>Vol 7d</th><th>Avg sold<br>48h</th></tr></thead><tbody>${parts}${setLine}</tbody></table>
+    <th>Vol 48h</th><th>Vol 7d</th><th>Avg sold<br>48h</th><th>Market</th></tr></thead><tbody>${parts}${setLine}</tbody></table>
     </div></td></tr>`;
 }
 function renderSets() {
@@ -709,6 +718,7 @@ const modCols = [
   { key: "max_vol", label: "Max vol<br>48h", sort: r => r.rmax_stats?.vol_48h },
   { key: "premium", label: "Max<br>premium", title: "Max WTS − R0 WTS: what maxing adds when you list it" },
   { key: "plat_per_kendo", label: "p / 1k<br>endo", title: "Max premium per 1,000 endo spent maxing" },
+  { key: "market", label: "Market", nosort: true },
 ];
 const openMods = new Set();
 
@@ -742,7 +752,8 @@ function modRow(m) {
     <td title="${s0?.avg_90d != null ? `90d average ${fmt(Math.round(s0.avg_90d * 10) / 10)}p` : ""}">${signed(m.vs_avg == null ? null : Math.round(m.vs_avg), "%", true)}</td>
     <td>${vol(s0?.vol_48h)}</td>
     <td>${fmt(m.rmax.wts)}</td><td>${fmt(m.rmax.wtb)}</td><td>${vol(sm?.vol_48h)}</td>
-    <td>${signed(m.premium)}</td><td>${fmt(m.plat_per_kendo == null ? null : Math.round(m.plat_per_kendo * 10) / 10)}</td></tr>`;
+    <td>${signed(m.premium)}</td><td>${fmt(m.plat_per_kendo == null ? null : Math.round(m.plat_per_kendo * 10) / 10)}</td>
+    <td class="mkt-cell">${marketLink(m.slug, `Primed ${m.name}`)}</td></tr>`;
   if (!open) return row;
   const facts = `<dl class="facts">
     <dt>Rank 0 90d range</dt><dd>${fmt(s0?.low_90d)}–${fmt(s0?.high_90d)}p</dd>
@@ -914,6 +925,11 @@ document.addEventListener("pointermove", e => {
 });
 
 // ---------- shared bits ----------
+// Link to the item's page on warframe.market (opens a new tab).
+const EXTERNAL = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>';
+const marketLink = (slug, name) => `<a class="mkt" href="https://warframe.market/items/${encodeURIComponent(slug)}" target="_blank"
+  rel="noopener noreferrer" title="Open ${esc(name)} on warframe.market" aria-label="${esc(name)} on warframe.market (opens in a new tab)">${EXTERNAL}</a>`;
+
 // A holo window: glowing chamfered frame, hatched corners and a title bar.
 const win = (title, body) => `<section class="hw"><div class="hw-frame"><div class="hw-panel">
   <h2 class="htitle">${title}</h2><div class="win-body">${body}</div></div></div>
@@ -1048,6 +1064,7 @@ document.addEventListener("click", e => {
   }
   const retry = e.target.closest("[data-retry]");
   if (retry) { retry.dataset.retry === "vaulted" ? loadVaulted() : load(retry.dataset.retry); return; }
+  if (e.target.closest("a")) return;
   const row = e.target.closest("tr.row");
   if (row) toggleRow(row);
 });
