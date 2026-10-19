@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from statistics import mean
 
@@ -75,6 +76,36 @@ def stats_cached(http: Http, slug: str) -> bool:
 def fetch_volume(http: Http, slug: str) -> Volume:
     data = http.cached_json(f"stats_{slug}", STATS_URL.format(slug=slug), ttl=STATS_TTL, transform=_reduce_stats)
     return Volume(**data)
+
+
+Progress = Callable[[int, int, str], None]  # (done, total, what)
+
+
+def fetch_set_spreads(
+    http: Http, targets: list[Target], depth: int = 1, with_volume: bool = True, on_progress: Progress | None = None
+) -> list[SetSpread]:
+    """Quotes (and volume) for every set and part. Cached volume is free; only uncached items cost a request."""
+    slugs = list(dict.fromkeys([s for t in targets for s in [t.slug, *(p.slug for p in t.parts)]]))
+    to_fetch = [s for s in slugs if not stats_cached(http, s)] if with_volume else []
+    total, done = len(slugs) + len(to_fetch), 0
+    quotes: dict[str, Quote] = {}
+    for slug in slugs:
+        quotes[slug] = fetch_quote(http, slug, depth=depth)
+        done += 1
+        if on_progress:
+            on_progress(done, total, "orders")
+    volumes: dict[str, Volume] = {}
+    if with_volume:
+        for slug in slugs:
+            volumes[slug] = fetch_volume(http, slug)
+            if slug in to_fetch:
+                done += 1
+                if on_progress:
+                    on_progress(done, total, "volume")
+    return [
+        SetSpread(t, quotes[t.slug], {p.slug: quotes[p.slug] for p in t.parts}, volumes or None)
+        for t in targets
+    ]
 
 
 def _sum(values: list[float | None]) -> float | None:

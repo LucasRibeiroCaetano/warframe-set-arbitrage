@@ -11,7 +11,9 @@ from urllib.parse import urlsplit
 import httpx
 
 USER_AGENT = "warframe-set-arbitrage/0.1 (+https://github.com/LucasRibeiroCaetano/warframe-set-arbitrage)"
-CACHE_DIR = Path(os.environ.get("WFSPREAD_CACHE", Path.home() / ".cache" / "warframe-set-arbitrage"))
+# Vercel functions can only write to /tmp (kept while the instance stays warm).
+_DEFAULT_CACHE = Path("/tmp") if os.environ.get("VERCEL") else Path.home() / ".cache"
+CACHE_DIR = Path(os.environ.get("WFSPREAD_CACHE", _DEFAULT_CACHE / "warframe-set-arbitrage"))
 
 # warframe.market asks clients to stay at or below ~3 requests/second.
 THROTTLED_HOSTS = {"api.warframe.market"}

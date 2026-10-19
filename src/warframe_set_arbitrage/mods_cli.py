@@ -5,14 +5,12 @@ import csv
 from datetime import datetime, timezone
 
 from rich.console import Console
-from rich.progress import BarColumn, MofNCompleteColumn, Progress, TextColumn, TimeRemainingColumn
 from rich.rule import Rule
 from rich.table import Table
 
-from .cli import fmt, fmt_delta, fmt_vol
+from .cli import fetch_progress, fmt, fmt_delta, fmt_vol
 from .http import Http
-from .mods import Baro, ModSpread, baro_status, fetch_mod_stats, mod_stats_cached, primed_mods
-from .pricing import Quote, fetch_quote
+from .mods import Baro, ModSpread, baro_status, fetch_mod_spreads, primed_mods
 
 SORTS = {
     "dip": lambda s: -s.dip if s.dip is not None else None,  # deepest dip first
@@ -55,33 +53,11 @@ def main(argv: list[str]) -> int:
             console.print("[yellow]No primed mods match those filters.[/]")
             return 1
 
-        quotes: dict[tuple[str, int], Quote] = {}
-        stats = {}
-        with Progress(
-            TextColumn("Fetching {task.fields[what]}"),
-            BarColumn(),
-            MofNCompleteColumn(),
-            TimeRemainingColumn(),
-            console=console,
-            transient=True,
-        ) as progress:
-            uncached = 0 if args.no_volume else sum(1 for m in mods if not mod_stats_cached(http, m.slug))
-            task = progress.add_task("fetch", total=2 * len(mods) + uncached, what="orders")
-            for m in mods:
-                for rank in (0, m.max_rank):
-                    quotes[m.slug, rank] = fetch_quote(http, m.slug, depth=args.depth, rank=rank)
-                    progress.advance(task)
-            if not args.no_volume:
-                progress.update(task, what="stats")
-                for m in mods:
-                    was_cached = mod_stats_cached(http, m.slug)
-                    stats[m.slug] = fetch_mod_stats(http, m.slug)
-                    if not was_cached:
-                        progress.advance(task)
+        with fetch_progress(console) as on_progress:
+            spreads = fetch_mod_spreads(http, mods, args.depth, not args.no_volume, on_progress)
     finally:
         http.close()
 
-    spreads = [ModSpread(m, quotes[m.slug, 0], quotes[m.slug, m.max_rank], stats.get(m.slug)) for m in mods]
     if args.sort == "name":
         spreads.sort(key=lambda s: s.mod.name)
     else:

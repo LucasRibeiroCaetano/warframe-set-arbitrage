@@ -1,0 +1,774 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Warframe Set Arbitrage</title>
+<meta name="description" content="Prime set vs. parts spreads and primed mods around Baro's visits, live from warframe.market.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232a78d6'/%3E%3Cpath d='M7 21l6-7 5 4 7-9' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7;
+  --surface: #fcfcfb;
+  --surface-2: #f3f2ee;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --muted: #898781;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --border: rgba(11, 11, 11, 0.10);
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --good: #006300;
+  --bad: #c42f2f;
+  --warn: #8a5a00;
+  --accent: #2a78d6;
+  --accent-wash: rgba(42, 120, 214, 0.10);
+  --baro: #8a5a00;
+  --baro-wash: rgba(250, 178, 25, 0.16);
+  --pr: #6250d6;
+  --pr-wash: rgba(98, 80, 214, 0.12);
+  --unv: #12805a;
+  --unv-wash: rgba(27, 175, 122, 0.12);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --surface: #1a1a19;
+    --surface-2: #232321;
+    --ink: #f0efec;
+    --ink-2: #c3c2b7;
+    --muted: #898781;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --border: rgba(255, 255, 255, 0.10);
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --good: #2fbf2f;
+    --bad: #ef7070;
+    --warn: #fab219;
+    --accent: #5598e7;
+    --accent-wash: rgba(57, 135, 229, 0.16);
+    --baro: #fab219;
+    --baro-wash: rgba(250, 178, 25, 0.14);
+    --pr: #9085e9;
+    --pr-wash: rgba(144, 133, 233, 0.16);
+    --unv: #3fcf98;
+    --unv-wash: rgba(25, 158, 112, 0.18);
+    --shadow: none;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d;
+  --surface: #1a1a19;
+  --surface-2: #232321;
+  --ink: #f0efec;
+  --ink-2: #c3c2b7;
+  --muted: #898781;
+  --grid: #2c2c2a;
+  --axis: #383835;
+  --border: rgba(255, 255, 255, 0.10);
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --good: #2fbf2f;
+  --bad: #ef7070;
+  --warn: #fab219;
+  --accent: #5598e7;
+  --accent-wash: rgba(57, 135, 229, 0.16);
+  --baro: #fab219;
+  --baro-wash: rgba(250, 178, 25, 0.14);
+  --pr: #9085e9;
+  --pr-wash: rgba(144, 133, 233, 0.16);
+  --unv: #3fcf98;
+  --unv-wash: rgba(25, 158, 112, 0.18);
+  --shadow: none;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+button, input, select { font: inherit; color: inherit; }
+a { color: var(--accent); }
+.wrap { max-width: 1320px; margin: 0 auto; padding: 20px 16px 48px; }
+
+header.top { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: flex-end; justify-content: space-between; }
+h1 { font-size: 20px; margin: 0; letter-spacing: -0.01em; }
+.sub { color: var(--ink-2); margin: 2px 0 0; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.controls label { color: var(--ink-2); font-size: 13px; display: inline-flex; gap: 6px; align-items: center; }
+select, input[type="search"] {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; min-height: 34px;
+}
+input[type="search"] { width: 200px; max-width: 100%; }
+.btn {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; min-height: 34px;
+  cursor: pointer; display: inline-flex; gap: 6px; align-items: center;
+}
+.btn:hover { background: var(--surface-2); }
+.btn:disabled { opacity: 0.55; cursor: progress; }
+.icon-btn { width: 34px; justify-content: center; padding: 0; }
+
+nav.tabs { display: flex; gap: 4px; margin: 20px 0 16px; border-bottom: 1px solid var(--border); }
+nav.tabs button {
+  background: none; border: 0; border-bottom: 2px solid transparent; padding: 10px 14px; cursor: pointer;
+  color: var(--ink-2); font-weight: 500; margin-bottom: -1px;
+}
+nav.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+nav.tabs .count { color: var(--muted); font-weight: 400; margin-left: 4px; }
+
+.banner {
+  display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; padding: 10px 14px; border-radius: 10px;
+  background: var(--surface); border: 1px solid var(--border); margin-bottom: 16px;
+}
+.banner.baro-here { background: var(--baro-wash); border-color: transparent; }
+.banner strong { font-weight: 600; }
+.banner .muted { color: var(--ink-2); }
+
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.tile { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; box-shadow: var(--shadow); }
+.tile .label { color: var(--ink-2); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+.tile .value { font-size: 26px; font-weight: 600; margin-top: 4px; letter-spacing: -0.01em; }
+.tile .detail { color: var(--ink-2); font-size: 13px; margin-top: 2px; }
+
+.filters { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-bottom: 12px; }
+.seg { display: inline-flex; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 2px; }
+.seg button { background: none; border: 0; border-radius: 6px; padding: 5px 10px; cursor: pointer; color: var(--ink-2); }
+.seg button[aria-pressed="true"] { background: var(--accent-wash); color: var(--ink); font-weight: 500; }
+.check { display: inline-flex; gap: 6px; align-items: center; color: var(--ink-2); cursor: pointer; }
+
+section.group { margin-bottom: 24px; }
+section.group h2 { font-size: 15px; margin: 0 0 8px; font-weight: 600; }
+section.group h2 .count { color: var(--muted); font-weight: 400; }
+.table-wrap {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow-x: auto; box-shadow: var(--shadow);
+}
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+th, td { padding: 8px 10px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--grid); }
+th:first-child, td:first-child { text-align: left; padding-left: 14px; }
+thead th {
+  font-size: 12px; font-weight: 600; color: var(--ink-2); background: var(--surface); position: sticky; top: 0;
+  cursor: pointer; user-select: none; vertical-align: bottom; line-height: 1.25;
+}
+thead th:hover { color: var(--ink); }
+thead th.sorted { color: var(--ink); }
+thead th .arrow { color: var(--accent); margin-left: 2px; }
+thead th.nosort { cursor: default; }
+tbody tr.row { cursor: pointer; }
+tbody tr.row:hover td { background: var(--surface-2); }
+tbody tr.row.open td { background: var(--surface-2); border-bottom-color: transparent; }
+tbody tr:last-child td { border-bottom: 0; }
+td.name { font-weight: 500; }
+td.name .chev { display: inline-block; width: 12px; color: var(--muted); transition: transform 0.15s; }
+tr.open td.name .chev { transform: rotate(90deg); }
+td.dim { color: var(--ink-2); }
+.pos { color: var(--good); }
+.neg { color: var(--bad); }
+.zero { color: var(--muted); }
+.low { color: var(--warn); }
+.none { color: var(--bad); }
+.na { color: var(--muted); }
+.partial { color: var(--warn); }
+
+.badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 999px; margin-left: 6px; vertical-align: 1px; }
+.badge.pr { color: var(--pr); background: var(--pr-wash); }
+.badge.unv { color: var(--unv); background: var(--unv-wash); }
+.badge.baro { color: var(--baro); background: var(--baro-wash); }
+
+tr.detail > td { background: var(--surface-2); padding: 4px 14px 16px 34px; text-align: left; white-space: normal; }
+.detail-grid { display: flex; flex-wrap: wrap; gap: 16px 32px; align-items: flex-start; }
+.detail table { width: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
+.detail table th, .detail table td { padding: 6px 10px; font-size: 13px; }
+.detail table thead th { cursor: default; position: static; }
+.facts { display: grid; grid-template-columns: auto auto; gap: 4px 16px; font-size: 13px; align-content: start; }
+.facts dt { color: var(--ink-2); }
+.facts dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+
+.spark { display: block; overflow: visible; }
+.chart-box {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px 6px; position: relative;
+  flex: 1 1 440px; max-width: 560px; min-width: 0;
+}
+.chart-box svg { display: block; width: 100%; height: auto; }
+.chart-box .chart-title { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+.legend { display: flex; gap: 14px; font-size: 12px; color: var(--ink-2); margin-bottom: 4px; }
+.legend i { display: inline-block; width: 12px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 5px; }
+.legend i.dash { height: 0; border-top: 1.5px dashed var(--muted); }
+.chart text { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.chart .label-1 { fill: var(--ink-2); }
+
+#tooltip {
+  position: fixed; pointer-events: none; z-index: 10; background: var(--surface); color: var(--ink);
+  border: 1px solid var(--border); border-radius: 8px; padding: 6px 9px; font-size: 12px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  font-variant-numeric: tabular-nums; display: none; line-height: 1.5;
+}
+#tooltip .t-date { color: var(--ink-2); }
+#tooltip i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+
+.state { padding: 48px 16px; text-align: center; color: var(--ink-2); }
+.state .big { font-size: 15px; color: var(--ink); margin-bottom: 4px; }
+.spinner {
+  width: 22px; height: 22px; border: 2.5px solid var(--grid); border-top-color: var(--accent); border-radius: 50%;
+  animation: spin 0.8s linear infinite; margin: 0 auto 12px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.error { color: var(--bad); }
+
+details.help { margin: 8px 0 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; }
+details.help summary { cursor: pointer; font-weight: 500; }
+details.help dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 12px 0 4px; font-size: 13px; }
+details.help dt { font-weight: 600; }
+details.help dd { margin: 0; color: var(--ink-2); }
+footer { color: var(--muted); font-size: 12px; margin-top: 24px; line-height: 1.7; }
+footer code { font-size: 11px; }
+
+@media (max-width: 640px) {
+  .tile .value { font-size: 22px; }
+  input[type="search"] { width: 100%; }
+  .filters { gap: 8px; }
+  details.help dl { grid-template-columns: 1fr; gap: 2px; }
+  details.help dd { margin-bottom: 8px; }
+  tr.detail > td { padding-left: 14px; }
+}
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2.4s; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Warframe Set Arbitrage</h1>
+      <p class="sub">Live spreads from players currently in game on warframe.market</p>
+    </div>
+    <div class="controls">
+      <label>Platform
+        <select id="platform">
+          <option value="pc">PC</option><option value="ps4">PlayStation</option><option value="xbox">Xbox</option>
+          <option value="switch">Switch</option><option value="mobile">Mobile</option>
+        </select>
+      </label>
+      <label title="Average the best N orders per side, which ignores bait listings">Depth
+        <select id="depth"><option value="1">Best order</option><option value="3">Top 3 avg</option><option value="5">Top 5 avg</option></select>
+      </label>
+      <button class="btn" id="refresh" title="Reload the current tab">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
+        Refresh
+      </button>
+      <button class="btn icon-btn" id="theme" title="Toggle light / dark" aria-label="Toggle light or dark theme">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="sets" aria-selected="true">Prime sets<span class="count" id="count-sets"></span></button>
+    <button role="tab" data-tab="mods" aria-selected="false">Primed mods<span class="count" id="count-mods"></span></button>
+  </nav>
+
+  <main id="view"></main>
+
+  <footer id="footer"></footer>
+</div>
+<div id="tooltip" role="tooltip"></div>
+
+<script>
+"use strict";
+
+const $ = (sel, root = document) => root.querySelector(sel);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+// ---------- persisted view state (per viewer, best effort) ----------
+const STORE_KEY = "wfsa-ui";
+function loadPrefs() { try { return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch { return {}; } }
+function savePrefs() { try { localStorage.setItem(STORE_KEY, JSON.stringify(prefs)); } catch {} }
+const prefs = Object.assign({
+  tab: "sets", platform: "pc", depth: "1", theme: null,
+  sets: { search: "", source: "all", kind: "all", all: false, sort: "delta_wts", dir: -1 },
+  mods: { search: "", baroOnly: false, all: false, sort: "dip", dir: 1 },
+}, loadPrefs());
+if (location.hash === "#mods" || location.hash === "#sets") prefs.tab = location.hash.slice(1);
+
+// ---------- formatting ----------
+const fmt = v => v == null ? "—" : (Number.isInteger(v) ? String(v) : v.toFixed(1));
+// invert: lower is better (a price dip is a buy signal).
+const signed = (v, suffix = "", invert = false) => {
+  if (v == null) return '<span class="na">—</span>';
+  const cls = v === 0 ? "zero" : (v > 0) !== invert ? "pos" : "neg";
+  const txt = (v > 0 ? "+" : v < 0 ? "−" : "±") + fmt(Math.abs(Math.round(v * 10) / 10)) + suffix;
+  return `<span class="${cls}">${txt}</span>`;
+};
+const vol = v => v == null ? '<span class="na">—</span>' : v === 0 ? '<span class="none" title="No trades in 48h">0</span>'
+  : v < 5 ? `<span class="low" title="Under 5 trades in 48h">${v}</span>` : String(v);
+function partsSum(p) {
+  if (p.missing && p.total === 0) return '<span class="na">—</span>';
+  return p.missing ? `<span class="partial" title="${p.missing} part(s) have no in-game order on this side">≥${fmt(p.total)}</span>` : fmt(p.total);
+}
+function rel(iso) {
+  if (!iso) return "";
+  let s = (new Date(iso) - Date.now()) / 1000;
+  const past = s < 0; s = Math.abs(s);
+  const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60);
+  const txt = d ? `${d}d ${h}h` : h ? `${h}h ${m}m` : `${m}m`;
+  return past ? `${txt} ago` : `in ${txt}`;
+}
+const when = iso => iso ? new Date(iso).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
+const shortDate = d => new Date(d + "T00:00:00Z").toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" });
+
+// ---------- data loading ----------
+// Requests run one at a time so the server never exceeds warframe.market's rate limit.
+const data = { sets: null, mods: null };
+const status = { sets: "idle", mods: "idle" };
+const errors = {};
+const started = {};
+let queue = Promise.resolve();
+
+function query(tab) {
+  const p = new URLSearchParams({ platform: prefs.platform, depth: prefs.depth });
+  if (prefs[tab].all) p.set("all", "1");
+  return p.toString();
+}
+function load(tab) {
+  const q = query(tab);
+  if (status[tab] === "loading" && started[tab]?.q === q) return queue;
+  status[tab] = "loading"; started[tab] = { q, t: Date.now() };
+  if (tab === prefs.tab) render();
+  queue = queue.then(async () => {
+    if (started[tab].q !== q) return;
+    try {
+      const res = await fetch(`/api/${tab}?${q}`);
+      const body = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+      if (!res.ok || body.error) throw new Error(body.error || `HTTP ${res.status}`);
+      if (started[tab].q !== q) return;
+      data[tab] = body; status[tab] = "ready"; delete errors[tab];
+    } catch (e) {
+      if (started[tab].q !== q) return;
+      status[tab] = "error"; errors[tab] = e.message;
+    }
+    updateCounts();
+    if (tab === prefs.tab) render();
+  });
+  return queue;
+}
+function updateCounts() {
+  $("#count-sets").textContent = data.sets ? ` ${data.sets.sets.length}` : "";
+  $("#count-mods").textContent = data.mods ? ` ${data.mods.mods.length}` : "";
+}
+setInterval(() => {
+  const el = $("#elapsed");
+  if (el && started[prefs.tab]) el.textContent = Math.round((Date.now() - started[prefs.tab].t) / 1000) + "s";
+}, 1000);
+
+// ---------- sorting ----------
+function sortRows(rows, cols, state) {
+  const col = cols.find(c => c.key === state.sort) || cols[0];
+  const get = col.sort || (r => r[col.key]);
+  return [...rows].sort((a, b) => {
+    const x = get(a), y = get(b);
+    if (x == null && y == null) return 0;
+    if (x == null) return 1;
+    if (y == null) return -1;
+    return (typeof x === "string" ? x.localeCompare(y) : x - y) * state.dir;
+  });
+}
+function thead(cols, state, tab) {
+  return "<thead><tr>" + cols.map(c => {
+    const sorted = c.key === state.sort;
+    const arrow = sorted ? `<span class="arrow">${state.dir > 0 ? "↑" : "↓"}</span>` : "";
+    const attrs = c.nosort ? 'class="nosort"' : `data-sort="${c.key}" data-tab="${tab}" class="${sorted ? "sorted" : ""}" title="${esc(c.title || "")}"`;
+    return `<th ${attrs} scope="col">${c.label}${arrow}</th>`;
+  }).join("") + "</tr></thead>";
+}
+
+// ---------- sets tab ----------
+const setCols = [
+  { key: "name", label: "Set", sort: r => r.name },
+  { key: "set_wts", label: "Set<br>WTS", sort: r => r.set.wts, title: "Cheapest in-game seller for the full set" },
+  { key: "set_wtb", label: "Set<br>WTB", sort: r => r.set.wtb, title: "Highest in-game buyer for the full set" },
+  { key: "spread", label: "Spread", sort: r => r.set.spread, title: "Set WTS − Set WTB" },
+  { key: "set_vol", label: "Set vol<br>48h", sort: r => r.set.vol_48h, title: "Set trades closed in the last 48h" },
+  { key: "parts_wts", label: "Parts<br>WTS Σ", sort: r => r.parts_wts.total, title: "Sum of cheapest sellers over parts" },
+  { key: "parts_wtb", label: "Parts<br>WTB Σ", sort: r => r.parts_wtb.total, title: "Sum of highest buyers over parts" },
+  { key: "min_vol", label: "Min part<br>vol 48h", sort: r => r.min_part_vol_48h, title: "48h volume of the least-traded part" },
+  { key: "delta_wts", label: "Δ WTS", title: "Set WTS − Parts WTS Σ. + → buy parts, build and sell the set" },
+  { key: "delta_wtb", label: "Δ WTB", title: "Set WTB − Parts WTB Σ. − → buyers pay more for loose parts" },
+];
+const openSets = new Set();
+
+function setsFiltered() {
+  const st = prefs.sets, q = st.search.trim().toLowerCase();
+  return data.sets.sets.filter(s =>
+    (st.source === "all" || (st.source === "pr" ? s.pr : s.unvaulted)) &&
+    (st.kind === "all" || s.kind === st.kind) &&
+    (!q || s.name.toLowerCase().includes(q)));
+}
+function setBadges(s) {
+  let b = "";
+  if (s.pr) b += '<span class="badge pr" title="In Varzia\'s current Prime Resurgence stock">PR</span>';
+  if (s.unvaulted) b += s.partial
+    ? '<span class="badge unv" title="Unvaulted, but some part isn\'t in a dropping relic">Unv*</span>'
+    : '<span class="badge unv" title="Parts drop from current relics">Unv</span>';
+  return b;
+}
+function setRow(s) {
+  const open = openSets.has(s.slug);
+  const row = `<tr class="row${open ? " open" : ""}" data-open="sets:${s.slug}" tabindex="0" aria-expanded="${open}">
+    <td class="name"><span class="chev">›</span> ${esc(s.name)}${setBadges(s)}</td>
+    <td>${fmt(s.set.wts)}</td><td>${fmt(s.set.wtb)}</td><td class="dim">${fmt(s.set.spread)}</td>
+    <td>${vol(s.set.vol_48h)}</td><td>${partsSum(s.parts_wts)}</td><td>${partsSum(s.parts_wtb)}</td>
+    <td>${vol(s.min_part_vol_48h)}</td><td>${signed(s.delta_wts)}</td><td>${signed(s.delta_wtb)}</td></tr>`;
+  if (!open) return row;
+  const parts = s.parts.map(p => `<tr><td>${esc(p.name)}</td><td>${p.qty}</td><td>${fmt(p.wts)}</td><td>${fmt(p.wtb)}</td>
+    <td class="dim">${fmt(p.spread)}</td><td class="dim">${p.sellers}/${p.buyers}</td><td>${vol(p.vol_48h)}</td>
+    <td>${p.vol_7d ?? "—"}</td><td class="dim">${fmt(p.avg_48h)}</td></tr>`).join("");
+  const setLine = `<tr><td><strong>Set</strong></td><td></td><td>${fmt(s.set.wts)}</td><td>${fmt(s.set.wtb)}</td>
+    <td class="dim">${fmt(s.set.spread)}</td><td class="dim">${s.set.sellers}/${s.set.buyers}</td><td>${vol(s.set.vol_48h)}</td>
+    <td>${s.set.vol_7d ?? "—"}</td><td class="dim">${fmt(s.set.avg_48h)}</td></tr>`;
+  return row + `<tr class="detail"><td colspan="${setCols.length}"><div class="detail">
+    <table><thead><tr><th>Part</th><th>Qty</th><th>WTS</th><th>WTB</th><th>Spread</th><th>Sellers/<br>buyers</th>
+    <th>Vol 48h</th><th>Vol 7d</th><th>Avg sold<br>48h</th></tr></thead><tbody>${parts}${setLine}</tbody></table>
+    </div></td></tr>`;
+}
+function renderSets() {
+  const d = data.sets, st = prefs.sets;
+  const rows = setsFiltered();
+  const best = [...d.sets].filter(s => s.delta_wts != null).sort((a, b) => b.delta_wts - a.delta_wts)[0];
+  const bestSell = [...d.sets].filter(s => s.delta_wtb != null).sort((a, b) => a.delta_wtb - b.delta_wtb)[0];
+  const liquid = [...d.sets].filter(s => s.set.vol_48h != null).sort((a, b) => b.set.vol_48h - a.set.vol_48h)[0];
+  const banner = `<div class="banner">
+    ${d.pr_expiry ? `<span><strong>Prime Resurgence</strong> rotation ends ${when(d.pr_expiry)} <span class="muted">(${rel(d.pr_expiry)})</span></span>` : ""}
+    ${d.drops_updated ? `<span class="muted">Drop tables updated ${new Date(d.drops_updated).toLocaleDateString()}</span>` : ""}
+  </div>`;
+  const tiles = `<div class="tiles">
+    ${tile("Best build & sell", best ? signed(best.delta_wts, "p") : "—", best ? `${esc(best.name)}: parts ${fmt(best.parts_wts.total)}p → set ${fmt(best.set.wts)}p` : "")}
+    ${tile("Best to split", bestSell && bestSell.delta_wtb < 0 ? signed(bestSell.delta_wtb, "p") : "—", bestSell && bestSell.delta_wtb < 0 ? `${esc(bestSell.name)}: buyers pay more for parts` : "No set where parts outsell the set")}
+    ${tile("Most traded set", liquid ? `${liquid.set.vol_48h}` : "—", liquid ? `${esc(liquid.name)}, trades in 48h` : "")}
+  </div>`;
+  const filters = `<div class="filters">
+    <input type="search" id="search-sets" placeholder="Filter sets…" value="${esc(st.search)}" aria-label="Filter sets by name">
+    ${seg("sets", "source", [["all", "All"], ["pr", "Prime Resurgence"], ["unvaulted", "Unvaulted"]])}
+    ${seg("sets", "kind", [["all", "All types"], ["frame", "Warframes"], ["weapon", "Weapons"]])}
+    <label class="check" title="Include the permanent relic pool and permanently unvaulted primes (refetches)">
+      <input type="checkbox" id="all-sets" ${st.all ? "checked" : ""}> All unvaulted primes</label>
+  </div>`;
+  const groups = [["frame", "Warframes"], ["weapon", "Weapons"]].map(([kind, label]) => {
+    const g = sortRows(rows.filter(s => s.kind === kind), setCols, st);
+    if (!g.length) return "";
+    return `<section class="group"><h2>${label} <span class="count">${g.length}</span></h2>
+      <div class="table-wrap"><table>${thead(setCols, st, "sets")}<tbody>${g.map(setRow).join("")}</tbody></table></div></section>`;
+  }).join("");
+  const hidden = d.hidden.length && !st.all
+    ? `<p class="sub" style="font-size:13px">Hidden (not in their first Prime Access cycle): ${esc(d.hidden.join(", "))}.</p>` : "";
+  return banner + tiles + help("sets") + filters + (groups || emptyFilter()) + hidden;
+}
+
+// ---------- mods tab ----------
+const modCols = [
+  { key: "name", label: "Mod", sort: r => r.name },
+  { key: "trend", label: "Rank 0, 90 days", nosort: true },
+  { key: "r0_wts", label: "R0<br>WTS", sort: r => r.r0.wts, title: "Cheapest in-game seller at rank 0" },
+  { key: "r0_wtb", label: "R0<br>WTB", sort: r => r.r0.wtb, title: "Highest in-game buyer at rank 0" },
+  { key: "median", label: "R0 90d<br>median", sort: r => r.r0_stats?.median_90d, title: "Median of daily median rank 0 prices over 90 days" },
+  { key: "dip", label: "Dip", title: "R0 WTS vs the 90d median. − → cheaper than usual (buy signal)" },
+  { key: "r0_vol", label: "R0 vol<br>48h", sort: r => r.r0_stats?.vol_48h },
+  { key: "max_wts", label: "Max<br>WTS", sort: r => r.rmax.wts, title: "Cheapest in-game seller at max rank" },
+  { key: "max_wtb", label: "Max<br>WTB", sort: r => r.rmax.wtb, title: "Highest in-game buyer at max rank" },
+  { key: "max_vol", label: "Max vol<br>48h", sort: r => r.rmax_stats?.vol_48h },
+  { key: "premium", label: "Max<br>premium", title: "Max WTS − R0 WTS: what maxing adds when you list it" },
+  { key: "plat_per_kendo", label: "p / 1k<br>endo", title: "Max premium per 1,000 endo spent maxing" },
+];
+const openMods = new Set();
+
+function modsFiltered() {
+  const st = prefs.mods, q = st.search.trim().toLowerCase();
+  return data.mods.mods.filter(m => (!st.baroOnly || m.in_baro) && (!q || m.name.toLowerCase().includes(q)));
+}
+function modRow(m) {
+  const open = openMods.has(m.slug);
+  const s0 = m.r0_stats, sm = m.rmax_stats;
+  const row = `<tr class="row${open ? " open" : ""}" data-open="mods:${m.slug}" tabindex="0" aria-expanded="${open}">
+    <td class="name"><span class="chev">›</span> ${esc(m.name)}${m.in_baro ? '<span class="badge baro" title="In Baro\'s current stock">Baro</span>' : ""}</td>
+    <td>${s0 ? sparkline(s0.history, s0.median_90d, m.slug) : '<span class="na">—</span>'}</td>
+    <td>${fmt(m.r0.wts)}</td><td>${fmt(m.r0.wtb)}</td><td class="dim">${fmt(s0?.median_90d)}</td>
+    <td>${signed(m.dip == null ? null : Math.round(m.dip), "%", true)}</td><td>${vol(s0?.vol_48h)}</td>
+    <td>${fmt(m.rmax.wts)}</td><td>${fmt(m.rmax.wtb)}</td><td>${vol(sm?.vol_48h)}</td>
+    <td>${signed(m.premium)}</td><td>${fmt(m.plat_per_kendo == null ? null : Math.round(m.plat_per_kendo * 10) / 10)}</td></tr>`;
+  if (!open) return row;
+  const facts = `<dl class="facts">
+    <dt>Rank 0 90d range</dt><dd>${fmt(s0?.low_90d)}–${fmt(s0?.high_90d)}p</dd>
+    <dt>Rank ${m.max_rank} 90d range</dt><dd>${fmt(sm?.low_90d)}–${fmt(sm?.high_90d)}p</dd>
+    <dt>Rank ${m.max_rank} 90d median</dt><dd>${fmt(sm?.median_90d)}p</dd>
+    <dt>Sellers / buyers (R0)</dt><dd>${m.r0.sellers} / ${m.r0.buyers}</dd>
+    <dt>Sellers / buyers (max)</dt><dd>${m.rmax.sellers} / ${m.rmax.buyers}</dd>
+    <dt>Cost to max</dt><dd>${m.endo_to_max.toLocaleString()} endo</dd>
+    <dt></dt><dd>${m.credits_to_max.toLocaleString()} credits</dd>
+  </dl>`;
+  return row + `<tr class="detail"><td colspan="${modCols.length}"><div class="detail-grid">
+    ${s0 && sm ? historyChart(m) : ""}${facts}</div></td></tr>`;
+}
+function renderMods() {
+  const d = data.mods, st = prefs.mods, b = d.baro;
+  const rows = sortRows(modsFiltered(), modCols, st);
+  let banner;
+  if (b.active) {
+    banner = `<div class="banner baro-here"><span><strong>Baro Ki'Teer is at ${esc(b.location)}</strong> until ${when(b.expiry)}
+      <span class="muted">(${rel(b.expiry).replace("in ", "")} left)</span></span>
+      <span>${b.primed_in_stock.length ? "Primed mods in stock: " + esc(b.primed_in_stock.join(", ")) : "No primed mods in stock"}</span></div>`;
+  } else if (b.activation && new Date(b.activation) > Date.now()) {
+    banner = `<div class="banner"><span><strong>Baro Ki'Teer</strong> arrives at ${esc(b.location)} ${when(b.activation)}
+      <span class="muted">(${rel(b.activation)})</span></span>
+      <span class="muted">Primed mods he brings usually dip in price while he's here.</span></div>`;
+  } else {
+    banner = `<div class="banner"><span class="muted">Baro's next visit is unknown.</span></div>`;
+  }
+  const dips = d.mods.filter(m => m.dip != null).sort((a, b) => a.dip - b.dip);
+  const endo = d.mods.filter(m => m.plat_per_kendo != null).sort((a, b) => b.plat_per_kendo - a.plat_per_kendo)[0];
+  const tiles = `<div class="tiles">
+    ${tile("Deepest dip", dips[0] ? signed(Math.round(dips[0].dip), "%", true) : "—", dips[0] ? `${esc(dips[0].name)}: ${fmt(dips[0].r0.wts)}p vs ${fmt(dips[0].r0_stats.median_90d)}p usual` : "")}
+    ${tile("Below usual price", `${dips.filter(m => m.dip <= -10).length}`, "mods at least 10% under their 90d median")}
+    ${tile("Best maxing return", endo ? `${fmt(Math.round(endo.plat_per_kendo * 10) / 10)}p` : "—", endo ? `per 1k endo: ${esc(endo.name)} (+${fmt(endo.premium)}p)` : "")}
+  </div>`;
+  const filters = `<div class="filters">
+    <input type="search" id="search-mods" placeholder="Filter mods…" value="${esc(st.search)}" aria-label="Filter mods by name">
+    <label class="check"><input type="checkbox" id="baro-only" ${st.baroOnly ? "checked" : ""}> Only Baro's stock</label>
+    <label class="check" title="Every primed mod instead of the steady-demand watchlist (refetches)">
+      <input type="checkbox" id="all-mods" ${st.all ? "checked" : ""}> All primed mods</label>
+  </div>`;
+  const table = rows.length
+    ? `<div class="table-wrap"><table>${thead(modCols, st, "mods")}<tbody>${rows.map(modRow).join("")}</tbody></table></div>`
+    : emptyFilter();
+  return banner + tiles + help("mods") + filters + table;
+}
+
+// ---------- charts ----------
+// Sparkline: daily rank 0 median, dashed line at the 90d median, dot on the latest day.
+const charts = {};
+function sparkline(hist, med, id) {
+  if (!hist?.length) return "";
+  const W = 112, H = 28, P = 3;
+  const ys = hist.map(h => h[1]);
+  const lo = Math.min(...ys, med ?? Infinity), hi = Math.max(...ys, med ?? -Infinity);
+  const x = i => P + i * (W - 2 * P) / Math.max(hist.length - 1, 1);
+  const y = v => hi === lo ? H / 2 : H - P - (v - lo) * (H - 2 * P) / (hi - lo);
+  const path = hist.map((h, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(h[1]).toFixed(1)}`).join("");
+  charts["s:" + id] = { hist: [{ name: "Rank 0", color: "var(--series-1)", pts: hist }], x, y, W, H };
+  const last = hist.length - 1;
+  return `<svg class="spark" data-chart="s:${id}" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img"
+    aria-label="Rank 0 daily median over 90 days, from ${fmt(ys[0])} to ${fmt(ys[last])} platinum">
+    ${med != null ? `<line x1="${P}" x2="${W - P}" y1="${y(med)}" y2="${y(med)}" stroke="var(--muted)" stroke-width="1" stroke-dasharray="3 3"/>` : ""}
+    <path d="${path}" fill="none" stroke="var(--series-1)" stroke-width="1.75" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="${x(last)}" cy="${y(ys[last])}" r="3" fill="var(--series-1)" stroke="var(--surface)" stroke-width="1.5"/>
+    <line class="guide" y1="0" y2="${H}" stroke="var(--axis)" stroke-width="1" visibility="hidden"/>
+    <rect width="${W}" height="${H}" fill="transparent"/></svg>`;
+}
+
+// Detail chart: rank 0 and max rank daily medians on one platinum axis.
+function historyChart(m) {
+  const W = 520, H = 200, L = 36, R = 54, T = 10, B = 24;
+  const series = [
+    { name: "Rank 0", color: "var(--series-1)", pts: m.r0_stats.history },
+    { name: `Rank ${m.max_rank}`, color: "var(--series-2)", pts: m.rmax_stats.history },
+  ].filter(s => s.pts.length);
+  const dates = [...new Set(series.flatMap(s => s.pts.map(p => p[0])))].sort();
+  const di = Object.fromEntries(dates.map((d, i) => [d, i]));
+  const all = series.flatMap(s => s.pts.map(p => p[1]));
+  const hi = niceMax(Math.max(...all)), lo = 0;
+  const x = i => L + i * (W - L - R) / Math.max(dates.length - 1, 1);
+  const y = v => T + (H - T - B) * (1 - (v - lo) / (hi - lo));
+  const ticks = [0, hi / 2, hi];
+  const grid = ticks.map(v => `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(${v === 0 ? "--axis" : "--grid"})" stroke-width="1"/>
+    <text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${fmt(v)}</text>`).join("");
+  const xt = [0, Math.floor((dates.length - 1) / 2), dates.length - 1].map((i, k) =>
+    `<text x="${x(i)}" y="${H - 6}" text-anchor="${["start", "middle", "end"][k]}">${shortDate(dates[i])}</text>`).join("");
+  const lines = series.map(s => {
+    const d = s.pts.map((p, i) => `${i ? "L" : "M"}${x(di[p[0]]).toFixed(1)},${y(p[1]).toFixed(1)}`).join("");
+    const lp = s.pts[s.pts.length - 1];
+    return `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      <circle cx="${x(di[lp[0]])}" cy="${y(lp[1])}" r="4" fill="${s.color}" stroke="var(--surface)" stroke-width="2"/>
+      <text class="label-1" x="${x(di[lp[0]]) + 8}" y="${y(lp[1]) + 4}">${fmt(lp[1])}p</text>`;
+  }).join("");
+  const id = "h:" + m.slug;
+  charts[id] = { hist: series, x: i => x(i), y, W, H, dates, di };
+  return `<div class="chart-box"><div class="chart-title">Daily median price, last 90 days</div>
+    <div class="legend">${series.map(s => `<span><i style="background:${s.color}"></i>${s.name}</span>`).join("")}</div>
+    <svg class="chart" data-chart="${id}" width="100%" viewBox="0 0 ${W} ${H}" style="max-width:${W}px" role="img"
+      aria-label="Daily median price of ${esc(m.name)} at rank 0 and max rank over 90 days">
+      ${grid}${xt}${lines}
+      <line class="guide" y1="${T}" y2="${H - B}" stroke="var(--axis)" stroke-width="1" visibility="hidden"/>
+      <rect x="${L}" y="0" width="${W - L - R}" height="${H}" fill="transparent"/></svg></div>`;
+}
+function niceMax(v) {
+  const step = Math.pow(10, Math.floor(Math.log10(v || 1)));
+  for (const k of [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10]) if (k * step >= v) return k * step;
+  return 10 * step;
+}
+
+// Crosshair + tooltip for both chart kinds.
+const tip = $("#tooltip");
+document.addEventListener("pointermove", e => {
+  const svg = e.target.closest?.("svg[data-chart]");
+  document.querySelectorAll("svg[data-chart] .guide").forEach(g => { if (!svg || !svg.contains(g)) g.setAttribute("visibility", "hidden"); });
+  if (!svg) { tip.style.display = "none"; return; }
+  const c = charts[svg.dataset.chart];
+  if (!c) return;
+  const box = svg.getBoundingClientRect();
+  const px = (e.clientX - box.left) * (c.W / box.width);
+  const dates = c.dates || c.hist[0].pts.map(p => p[0]);
+  let best = 0, bd = Infinity;
+  dates.forEach((_, i) => { const dd = Math.abs(c.x(i) - px); if (dd < bd) { bd = dd; best = i; } });
+  const date = dates[best];
+  const guide = svg.querySelector(".guide");
+  guide.setAttribute("x1", c.x(best)); guide.setAttribute("x2", c.x(best)); guide.setAttribute("visibility", "visible");
+  const rows = c.hist.map(s => {
+    const p = s.pts.find(p => p[0] === date);
+    return p ? `<div><i style="background:${s.color}"></i>${s.name}: <strong>${fmt(p[1])}p</strong></div>` : "";
+  }).join("");
+  tip.innerHTML = `<div class="t-date">${shortDate(date)}</div>${rows}`;
+  tip.style.display = "block";
+  const tw = tip.offsetWidth, th = tip.offsetHeight;
+  let left = e.clientX + 14, top = e.clientY - th - 10;
+  if (left + tw > innerWidth - 8) left = e.clientX - tw - 14;
+  if (top < 8) top = e.clientY + 16;
+  tip.style.left = left + "px"; tip.style.top = top + "px";
+});
+
+// ---------- shared bits ----------
+const tile = (label, value, detail) => `<div class="tile"><div class="label">${label}</div><div class="value">${value}</div><div class="detail">${detail}</div></div>`;
+const seg = (tab, key, opts) => `<div class="seg" role="group">${opts.map(([v, l]) =>
+  `<button data-seg="${tab}:${key}:${v}" aria-pressed="${prefs[tab][key] === v}">${l}</button>`).join("")}</div>`;
+const emptyFilter = () => `<div class="table-wrap"><div class="state">Nothing matches those filters.</div></div>`;
+
+const HELP = {
+  sets: [
+    ["Set WTS / WTB", "Cheapest in-game seller / highest in-game buyer for the full set."],
+    ["Parts WTS Σ / WTB Σ", "Sum over parts (× quantity) of the cheapest seller / highest buyer. ≥N means some part has no in-game order on that side."],
+    ["Δ WTS", "Set WTS − Parts WTS Σ. Positive: buying the parts is cheaper than the set, so build and sell the set."],
+    ["Δ WTB", "Set WTB − Parts WTB Σ. Negative: buyers pay more for loose parts than for the set."],
+    ["Vol 48h", "Trades closed on warframe.market (self-reported, so real volume is higher). Min part vol is the bottleneck when building or splitting."],
+    ["PR / Unv / Unv*", "Varzia's current stock / parts drop from current relics / some part isn't in a dropping relic. Unvaulted primes are shown only in their first Prime Access cycle."],
+  ],
+  mods: [
+    ["Dip", "Live rank 0 WTS vs the 90-day median of daily medians. Negative means cheaper than usual: buy during Baro's visit, sell a couple of months after he leaves."],
+    ["Max premium", "Max rank WTS − rank 0 WTS: what maxing adds when you list it."],
+    ["p / 1k endo", "Max premium per 1,000 endo. A primed (legendary) mod takes 40,920 endo and 1,976,436 credits to max; credits aren't counted."],
+    ["Watchlist", "Primed mods with steady demand (Continuity, Flow, Reach, Fever Strike, Target Cracker, …) plus anything Baro is selling right now."],
+    ["Sparkline", "Daily median rank 0 price over 90 days. The dashed line is the 90-day median; click a row for rank 0 vs max rank."],
+  ],
+};
+const help = tab => `<details class="help"><summary>How to read this</summary><dl>${HELP[tab].map(([t, d]) => `<dt>${t}</dt><dd>${d}</dd>`).join("")}</dl></details>`;
+
+function renderState(tab) {
+  if (status[tab] === "error" && !data[tab]) {
+    return `<div class="table-wrap"><div class="state"><div class="big error">Couldn't load ${tab === "sets" ? "prime sets" : "primed mods"}</div>
+      <div>${esc(errors[tab] || "")}</div><p><button class="btn" data-retry="${tab}">Try again</button></p></div></div>`;
+  }
+  const expect = tab === "sets" ? "up to about 2 minutes" : "about 20 seconds";
+  return `<div class="table-wrap"><div class="state"><div class="spinner"></div>
+    <div class="big">Fetching live prices from warframe.market… <span id="elapsed">0s</span></div>
+    <div>warframe.market allows ~3 requests/second, so a fresh fetch takes ${expect}. Results are then cached for 10 minutes.</div></div></div>`;
+}
+
+// ---------- render ----------
+function render() {
+  const tab = prefs.tab;
+  document.querySelectorAll("nav.tabs button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === tab)));
+  const view = $("#view");
+  const focused = document.activeElement?.id;
+  const caret = document.activeElement?.selectionStart;
+  if (!data[tab]) view.innerHTML = renderState(tab);
+  else {
+    const reloading = status[tab] === "loading"
+      ? `<div class="banner"><span class="muted">Refreshing… <span id="elapsed">0s</span></span></div>` : "";
+    const err = status[tab] === "error" ? `<div class="banner"><span class="error">Refresh failed: ${esc(errors[tab])}</span></div>` : "";
+    view.innerHTML = reloading + err + (tab === "sets" ? renderSets() : renderMods());
+  }
+  if (focused && $("#" + focused)) {
+    const el = $("#" + focused); el.focus();
+    if (caret != null && el.setSelectionRange) el.setSelectionRange(caret, caret);
+  }
+  renderFooter();
+}
+function renderFooter() {
+  const d = data[prefs.tab];
+  $("#footer").innerHTML = `${d ? `Data from ${new Date(d.generated_at).toLocaleTimeString()} (${d.platform}, ${d.depth > 1 ? `avg of top ${d.depth}` : "best order"}), cached for 10 minutes. ` : ""}
+    Prices: top 5 buy/sell orders from players in game, <code>api.warframe.market</code>. Volume: closed-trade statistics.
+    Relics: DE's drop tables via <code>drops.warframestat.us</code>. Varzia and Baro: <code>api.warframestat.us</code>.
+    <a href="https://github.com/LucasRibeiroCaetano/warframe-set-arbitrage">Source</a>`;
+}
+
+// ---------- events ----------
+document.addEventListener("click", e => {
+  const tabBtn = e.target.closest("nav.tabs button");
+  if (tabBtn) {
+    prefs.tab = tabBtn.dataset.tab; savePrefs(); history.replaceState(null, "", "#" + prefs.tab);
+    if (!data[prefs.tab] && status[prefs.tab] !== "loading") load(prefs.tab);
+    render(); return;
+  }
+  const th = e.target.closest("th[data-sort]");
+  if (th) {
+    const st = prefs[th.dataset.tab], key = th.dataset.sort;
+    if (st.sort === key) st.dir *= -1; else { st.sort = key; st.dir = key === "name" ? 1 : (key === "dip" ? 1 : -1); }
+    savePrefs(); render(); return;
+  }
+  const segBtn = e.target.closest("[data-seg]");
+  if (segBtn) {
+    const [tab, key, v] = segBtn.dataset.seg.split(":");
+    prefs[tab][key] = v; savePrefs(); render(); return;
+  }
+  const retry = e.target.closest("[data-retry]");
+  if (retry) { load(retry.dataset.retry); return; }
+  const row = e.target.closest("tr.row");
+  if (row) toggleRow(row);
+});
+document.addEventListener("keydown", e => {
+  if ((e.key === "Enter" || e.key === " ") && e.target.matches?.("tr.row")) { e.preventDefault(); toggleRow(e.target); }
+});
+function toggleRow(row) {
+  const [tab, slug] = row.dataset.open.split(":");
+  const set = tab === "sets" ? openSets : openMods;
+  set.has(slug) ? set.delete(slug) : set.add(slug);
+  render();
+  document.querySelector(`tr[data-open="${tab}:${slug}"]`)?.focus();
+}
+document.addEventListener("input", e => {
+  if (e.target.id === "search-sets") { prefs.sets.search = e.target.value; savePrefs(); render(); }
+  if (e.target.id === "search-mods") { prefs.mods.search = e.target.value; savePrefs(); render(); }
+});
+document.addEventListener("change", e => {
+  const id = e.target.id;
+  if (id === "baro-only") { prefs.mods.baroOnly = e.target.checked; savePrefs(); render(); }
+  if (id === "all-sets") { prefs.sets.all = e.target.checked; savePrefs(); load("sets"); }
+  if (id === "all-mods") { prefs.mods.all = e.target.checked; savePrefs(); load("mods"); }
+  if (id === "platform" || id === "depth") {
+    prefs[id] = e.target.value; savePrefs();
+    data.sets = data.mods = null; updateCounts();
+    load(prefs.tab).then(() => load(prefs.tab === "sets" ? "mods" : "sets"));
+  }
+});
+$("#refresh").addEventListener("click", () => load(prefs.tab));
+$("#theme").addEventListener("click", () => {
+  const dark = document.documentElement.dataset.theme
+    ? document.documentElement.dataset.theme === "dark"
+    : matchMedia("(prefers-color-scheme: dark)").matches;
+  prefs.theme = dark ? "light" : "dark"; savePrefs();
+  document.documentElement.dataset.theme = prefs.theme;
+});
+
+// ---------- start ----------
+if (prefs.theme) document.documentElement.dataset.theme = prefs.theme;
+$("#platform").value = prefs.platform;
+$("#depth").value = prefs.depth;
+render();
+// Load the visible tab first, then prefetch the other one.
+load(prefs.tab).then(() => load(prefs.tab === "sets" ? "mods" : "sets"));
+setInterval(() => { if (data[prefs.tab]) renderFooter(); }, 60000);
+</script>
+</body>
+</html>

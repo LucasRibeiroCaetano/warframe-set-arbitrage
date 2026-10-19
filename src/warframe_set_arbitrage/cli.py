@@ -3,6 +3,8 @@ from __future__ import annotations
 import argparse
 import csv
 import sys
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import datetime
 
 from rich.console import Console
@@ -12,7 +14,8 @@ from rich.table import Table
 
 from .catalog import RESURGENCE, UNVAULTED, build_catalog
 from .http import Http
-from .pricing import Quote, SetSpread, Volume, fetch_quote, fetch_volume, stats_cached
+from .pricing import Progress as OnProgress
+from .pricing import Quote, SetSpread, fetch_set_spreads
 
 SORTS = {
     "delta-wts": lambda s: s.delta_wts,
@@ -29,7 +32,7 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     p = argparse.ArgumentParser(
         prog="wfspread",
         description="Set vs. parts spreads on warframe.market for unvaulted and Prime Resurgence primes.",
-        epilog="Run 'wfspread mods' for primed mods around Baro's visits.",
+        epilog="Run 'wfspread mods' for primed mods around Baro's visits, or 'wfspread web' for the dashboard.",
     )
     p.add_argument("--source", choices=["all", "pr", "unvaulted"], default="all")
     p.add_argument("--pr", dest="source", action="store_const", const="pr",
@@ -48,6 +51,16 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     p.add_argument("--platform", default="pc", choices=["pc", "ps4", "xbox", "switch", "mobile"])
     p.add_argument("--refresh", action="store_true", help="ignore cached drop tables / item lists / volume")
     return p.parse_args(argv)
+
+
+def web_main(argv: list[str]) -> int:
+    p = argparse.ArgumentParser(prog="wfspread web", description="Serve the dashboard locally.")
+    p.add_argument("--port", type=int, default=8000)
+    p.add_argument("--no-open", action="store_true", help="don't open a browser tab")
+    args = p.parse_args(argv)
+    from .web import serve
+
+    return serve(args.port, open_browser=not args.no_open)
 
 
 def fmt(v: float | None) -> str:
@@ -94,6 +107,8 @@ def main(argv: list[str] | None = None) -> int:
         from .mods_cli import main as mods_main
 
         return mods_main(argv[1:])
+    if argv[:1] == ["web"]:
+        return web_main(argv[1:])
     args = parse_args(argv)
     console = Console()
     http = Http(rps=args.rps, refresh=args.refresh, platform=args.platform)
@@ -116,40 +131,11 @@ def main(argv: list[str] | None = None) -> int:
             console.print("[yellow]No sets match those filters.[/]")
             return 1
 
-        slugs = list(dict.fromkeys([s for t in targets for s in [t.slug, *(p.slug for p in t.parts)]]))
-        jobs = [("orders", s) for s in slugs]
-        if not args.no_volume:
-            # Cached volume is free; only uncached items cost a request.
-            jobs += [("volume", s) for s in slugs]
-        quotes: dict[str, Quote] = {}
-        volumes: dict[str, Volume] = {}
-        with Progress(
-            TextColumn("Fetching {task.fields[what]}"),
-            BarColumn(),
-            MofNCompleteColumn(),
-            TimeRemainingColumn(),
-            console=console,
-            transient=True,
-        ) as progress:
-            uncached = sum(1 for kind, s in jobs if kind == "orders" or not stats_cached(http, s))
-            task = progress.add_task("fetch", total=uncached, what="orders")
-            for kind, slug in jobs:
-                if kind == "orders":
-                    quotes[slug] = fetch_quote(http, slug, depth=args.depth)
-                    progress.advance(task)
-                else:
-                    progress.update(task, what="volume")
-                    was_cached = stats_cached(http, slug)
-                    volumes[slug] = fetch_volume(http, slug)
-                    if not was_cached:
-                        progress.advance(task)
+        with fetch_progress(console) as on_progress:
+            spreads = fetch_set_spreads(http, targets, args.depth, not args.no_volume, on_progress)
     finally:
         http.close()
 
-    spreads = [
-        SetSpread(t, quotes[t.slug], {p.slug: quotes[p.slug] for p in t.parts}, volumes or None)
-        for t in targets
-    ]
     if args.sort == "name":
         spreads.sort(key=lambda s: s.target.name)
     else:
@@ -161,6 +147,21 @@ def main(argv: list[str] | None = None) -> int:
         write_csv(args.csv, spreads)
         console.print(f"Wrote {args.csv}")
     return 0
+
+
+@contextmanager
+def fetch_progress(console: Console) -> Iterator[OnProgress]:
+    """A transient progress bar, yielded as an on_progress(done, total, what) callback."""
+    with Progress(
+        TextColumn("Fetching {task.fields[what]}"),
+        BarColumn(),
+        MofNCompleteColumn(),
+        TimeRemainingColumn(),
+        console=console,
+        transient=True,
+    ) as progress:
+        task = progress.add_task("fetch", total=None, what="orders")
+        yield lambda done, total, what: progress.update(task, completed=done, total=total, what=what)
 
 
 def spread_table(title: str, spreads: list[SetSpread], with_volume: bool) -> Table:

@@ -1,0 +1,2 @@
+# Runtime dependencies for the Vercel functions (the CLI also needs rich; see pyproject.toml).
+httpx>=0.28.1

@@ -13,7 +13,7 @@ from statistics import median
 
 from .catalog import DAY, HOUR, MARKET, _name, _parse_ts
 from .http import Http
-from .pricing import STATS_URL, Quote
+from .pricing import STATS_URL, Progress, Quote, fetch_quote
 
 BARO = "https://api.warframestat.us/pc/voidTrader?language=en"
 
@@ -115,6 +115,7 @@ class RankStats:
     median_90d: float | None  # median of the daily medians: the "usual" price, robust to Baro dips
     low_90d: float | None
     high_90d: float | None
+    history: list[tuple[str, float]]  # (date, median) per day over 90 days
 
 
 def _reduce_mod_stats(payload: dict) -> dict:
@@ -122,23 +123,49 @@ def _reduce_mod_stats(payload: dict) -> dict:
     out = {}
     for rank in {b.get("mod_rank") for b in closed.get("90days", [])}:
         hourly = [b for b in closed.get("48hours", []) if b.get("mod_rank") == rank]
-        daily = [b["median"] for b in closed.get("90days", []) if b.get("mod_rank") == rank]
+        history = [(b["datetime"][:10], b["median"]) for b in closed.get("90days", []) if b.get("mod_rank") == rank]
+        daily = [m for _, m in history]
         out[str(rank)] = {
             "vol_48h": sum(b["volume"] for b in hourly),
             "median_90d": median(daily) if daily else None,
             "low_90d": min(daily, default=None),
             "high_90d": max(daily, default=None),
+            "history": history,
         }
     return out
 
 
 def mod_stats_cached(http: Http, slug: str) -> bool:
-    return http.is_cached(f"modstats_{slug}", HOUR)
+    return http.is_cached(f"mod_stats_{slug}", HOUR)
 
 
 def fetch_mod_stats(http: Http, slug: str) -> dict[int, RankStats]:
-    data = http.cached_json(f"modstats_{slug}", STATS_URL.format(slug=slug), ttl=HOUR, transform=_reduce_mod_stats)
+    data = http.cached_json(f"mod_stats_{slug}", STATS_URL.format(slug=slug), ttl=HOUR, transform=_reduce_mod_stats)
     return {int(rank): RankStats(**s) for rank, s in data.items() if rank != "None"}
+
+
+def fetch_mod_spreads(
+    http: Http, mods: list[PrimedMod], depth: int = 1, with_stats: bool = True, on_progress: Progress | None = None
+) -> list[ModSpread]:
+    """Rank 0 and max rank quotes for every mod, plus per-rank trade stats."""
+    to_fetch = [m.slug for m in mods if not mod_stats_cached(http, m.slug)] if with_stats else []
+    total, done = 2 * len(mods) + len(to_fetch), 0
+    quotes: dict[tuple[str, int], Quote] = {}
+    for m in mods:
+        for rank in (0, m.max_rank):
+            quotes[m.slug, rank] = fetch_quote(http, m.slug, depth=depth, rank=rank)
+            done += 1
+            if on_progress:
+                on_progress(done, total, "orders")
+    stats: dict[str, dict[int, RankStats]] = {}
+    if with_stats:
+        for m in mods:
+            stats[m.slug] = fetch_mod_stats(http, m.slug)
+            if m.slug in to_fetch:
+                done += 1
+                if on_progress:
+                    on_progress(done, total, "stats")
+    return [ModSpread(m, quotes[m.slug, 0], quotes[m.slug, m.max_rank], stats.get(m.slug)) for m in mods]
 
 
 def _pct(now: float | None, usual: float | None) -> float | None:

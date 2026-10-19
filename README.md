@@ -11,6 +11,23 @@ warframes that have never been vaulted and the weapons released with them. That 
 Lex, Paris Prime, ...) and the permanently unvaulted Valkyr and Nyx Prime with their weapons. Pass `--all-unvaulted` to
 show everything that drops. Warframes and weapons are shown in separate tables.
 
+## Dashboard
+
+**Live: https://warframe-set-arbitrage.vercel.app**
+
+The web dashboard has two tabs: prime sets and primed mods around Baro's visits. It has sortable tables, per-set part
+breakdowns, and 90-day price charts for each mod. Run it locally with:
+
+```bash
+uv run wfspread web                    # http://127.0.0.1:8000, opens a browser tab
+```
+
+It's a static page ([static/index.html](src/warframe_set_arbitrage/static/index.html)) plus two JSON endpoints,
+`/api/sets` and `/api/mods` ([web.py](src/warframe_set_arbitrage/web.py)). Both take `platform`, `depth` (1–5) and
+`all=1`. On Vercel they run as Python functions ([api/](api/)), and the CDN caches each response for 10 minutes, so
+warframe.market is hit at most once per window. A cold fetch takes about 20 s for mods and about 1 min for sets.
+The Vercel project is linked to this GitHub repo, so pushing to `main` deploys to production.
+
 ## Run
 
 ```bash
