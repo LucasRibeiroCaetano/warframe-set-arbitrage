@@ -1,6 +1,6 @@
 """JSON API and local server for the dashboard.
 
-The same handlers run as Vercel functions (api/sets.py, api/mods.py, api/vaulted.py, api/baro.py)
+The same handlers run as Vercel functions (api/sets.py, api/mods.py, api/vaulted.py, api/world.py)
 and behind `wfspread web`. On Vercel the CDN caches each response for its route's
 window (ROUTES), so warframe.market is hit at most once per window per query;
 locally an in-memory cache does the same job.
@@ -22,7 +22,7 @@ from urllib.parse import parse_qs, urlsplit
 
 from .catalog import RESURGENCE, UNVAULTED, VAULTED, attach_parts, build_catalog, vaulted_targets
 from .http import Http
-from .mods import Baro, ModSpread, baro_status, fetch_mod_spreads, primed_mods
+from .mods import Baro, ModSpread, baro_status, fetch_mod_spreads, primed_mods, teshin_status
 from .pricing import Quote, SetSpread, fetch_set_spreads
 
 STATIC = Path(__file__).parent / "static"
@@ -120,6 +120,7 @@ def _set(s: SetSpread) -> dict:
         "pr": RESURGENCE in t.sources,
         "unvaulted": UNVAULTED in t.sources,
         "vaulted": VAULTED in t.sources,
+        "released": t.released,
         "partial": t.partial,
         "set": {**_quote(s.set_quote), **vol(t.slug)},
         "parts_wts": {"total": wts_sum, "missing": wts_missing},
@@ -164,14 +165,15 @@ def _baro(baro: Baro) -> dict:
     }
 
 
-def baro_payload(query: dict[str, list[str]]) -> dict:
-    """Just Baro's schedule and stock, for the header countdown: no warframe.market requests."""
+def world_payload(query: dict[str, list[str]]) -> dict:
+    """Baro's schedule and Teshin's Steel Path reward, for the header timers: no warframe.market requests."""
     http = Http()
     try:
         baro = baro_status(http)
+        teshin = teshin_status(http)
     finally:
         http.close()
-    return {"generated_at": _iso(datetime.now(timezone.utc)), "baro": _baro(baro)}
+    return {"generated_at": _iso(datetime.now(timezone.utc)), "baro": _baro(baro), "teshin": teshin}
 
 
 def _mod(s: ModSpread) -> dict:
@@ -208,7 +210,7 @@ ROUTES = {
     "/api/sets": (sets_payload, CACHE_SECONDS),
     "/api/mods": (mods_payload, CACHE_SECONDS),
     "/api/vaulted": (vaulted_payload, 3600),
-    "/api/baro": (baro_payload, CACHE_SECONDS),
+    "/api/world": (world_payload, CACHE_SECONDS),
 }
 
 

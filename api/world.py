@@ -1,4 +1,4 @@
-"""Vercel function: GET /api/baro (see warframe_set_arbitrage.web)."""
+"""Vercel function: GET /api/world (see warframe_set_arbitrage.web)."""
 
 import sys
 from pathlib import Path

@@ -81,6 +81,11 @@ header.top { display: flex; flex-wrap: wrap; gap: 16px 28px; align-items: center
 .bt-time { font-family: Orbitron, sans-serif; font-weight: 700; font-size: 22px; letter-spacing: 0.06em; color: var(--ink);
   text-shadow: 0 0 12px rgba(63, 195, 224, 0.6); font-variant-numeric: tabular-nums; line-height: 1.2; }
 .bt-sub { font-size: 12px; color: var(--muted); }
+.timers { display: flex; flex-wrap: wrap; gap: 10px; }
+.teshin-timer .bt-time { font-size: 18px; line-height: 1.35; }
+.teshin-timer.endo { border-color: var(--good); box-shadow: 0 0 12px rgba(110, 230, 194, 0.45), inset 0 0 10px rgba(110, 230, 194, 0.15); }
+.teshin-timer.endo .bt-label { color: var(--good); }
+.teshin-timer.endo .bt-time { color: #C9FFEC; text-shadow: 0 0 12px rgba(110, 230, 194, 0.6); }
 .baro-timer.here { border-color: var(--baro); box-shadow: 0 0 12px rgba(242, 194, 92, 0.45), inset 0 0 10px rgba(242, 194, 92, 0.15); }
 .baro-timer.here .bt-label { color: var(--baro); }
 .baro-timer.here .bt-time { color: #FFE3A3; text-shadow: 0 0 12px rgba(242, 194, 92, 0.65); }
@@ -350,11 +355,18 @@ footer code { font-size: 11px; color: var(--ink-2); }
       <h1 class="logo">WF ARBITRAGE</h1>
       <div class="logo-sub">MARKET TERMINAL</div>
     </div>
-    <button type="button" class="baro-timer" id="baro-timer" hidden title="Open primed mods">
-      <span class="bt-label">BARO KI'TEER ARRIVES IN</span>
-      <span class="bt-time" role="timer">--:--:--</span>
-      <span class="bt-sub"></span>
-    </button>
+    <div class="timers">
+      <button type="button" class="baro-timer" id="baro-timer" hidden title="Open primed mods">
+        <span class="bt-label">BARO KI'TEER ARRIVES IN</span>
+        <span class="bt-time" role="timer">--:--:--</span>
+        <span class="bt-sub"></span>
+      </button>
+      <button type="button" class="baro-timer teshin-timer" id="teshin-timer" hidden title="Teshin's Steel Path Honors reward this week. Open primed mods (Endo is what maxing them costs)">
+        <span class="bt-label">TESHIN · STEEL PATH</span>
+        <span class="bt-time" role="timer">--</span>
+        <span class="bt-sub"></span>
+      </button>
+    </div>
     <div class="controls">
       <label class="hfield"><span>Platform</span>
         <select id="platform">
@@ -429,6 +441,11 @@ function rel(iso) {
 }
 const when = iso => iso ? new Date(iso).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
 const shortDate = d => new Date(d + "T00:00:00Z").toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" });
+const longDate = d => new Date(d + "T00:00:00Z").toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" });
+function yearsAgo(d) {
+  const months = Math.round((Date.now() - Date.parse(d + "T00:00:00Z")) / (30.44 * 864e5));
+  return months < 12 ? `Released ${months} months ago` : `Released ${(months / 12).toFixed(1)} years ago`;
+}
 
 // ---------- data loading ----------
 // Requests run one at a time so the server never exceeds warframe.market's rate limit.
@@ -446,7 +463,8 @@ function query(tab) {
 // ---------- stored data ----------
 // Fetched responses are kept in this browser and reused for up to a day, so opening the page doesn't hit
 // warframe.market again; Refresh always fetches. Storage can be missing or full: then we just fetch.
-const STORE_DATA = "wfsa-data:";
+// Bump the version when payloads gain fields, so copies stored by an older page aren't shown without them.
+const STORE_DATA = "wfsa-data-v2:";
 const MAX_AGE_MS = 24 * 3600e3;
 const ageMs = body => Date.now() - Date.parse(body.generated_at);
 function readStored(key) {
@@ -459,6 +477,7 @@ function writeStored(key, body) {
   try {
     // Drop entries older than a day first so storage doesn't fill up with old platform/depth combinations.
     for (const k of Object.keys(localStorage)) {
+      if (k.startsWith("wfsa-data") && !k.startsWith(STORE_DATA)) { localStorage.removeItem(k); continue; }  // older versions
       if (!k.startsWith(STORE_DATA)) continue;
       try { if (ageMs(JSON.parse(localStorage.getItem(k))) >= MAX_AGE_MS) localStorage.removeItem(k); }
       catch { localStorage.removeItem(k); }
@@ -543,6 +562,7 @@ function thead(cols, state, tab) {
 // ---------- sets tab ----------
 const setCols = [
   { key: "name", label: "Set", sort: r => r.name },
+  { key: "released", label: "Released", title: "The prime's original release. In the unvaulted pool the oldest are vaulted first: sort oldest first to see what leaves next" },
   { key: "set_wts", label: "Set<br>WTS", sort: r => r.set.wts, title: "Cheapest in-game seller for the full set" },
   { key: "set_wtb", label: "Set<br>WTB", sort: r => r.set.wtb, title: "Highest in-game buyer for the full set" },
   { key: "spread", label: "Spread", sort: r => r.set.spread, title: "Set WTS − Set WTB" },
@@ -643,6 +663,7 @@ function setRow(s) {
   const open = openSets.has(s.slug);
   const row = `<tr class="row${open ? " open" : ""}" data-open="sets:${s.slug}" tabindex="0" aria-expanded="${open}">
     <td class="name"><span class="chev">›</span> ${esc(s.name)}${setBadges(s)}</td>
+    <td class="dim" title="${s.released ? yearsAgo(s.released) : ""}">${s.released ? longDate(s.released) : '<span class="na">—</span>'}</td>
     <td>${fmt(s.set.wts)}</td><td>${fmt(s.set.wtb)}</td><td class="dim">${fmt(s.set.spread)}</td>
     <td title="${s.set.avg_90d != null ? `90d average ${fmt(Math.round(s.set.avg_90d * 10) / 10)}p` : ""}">${signed(s.vs_avg == null ? null : Math.round(s.vs_avg), "%", true)}</td>
     <td>${vol(s.set.vol_48h)}</td><td>${partsSum(s.parts_wts)}</td><td>${partsSum(s.parts_wtb)}</td>
@@ -943,6 +964,7 @@ const HELP = {
   sets: [
     ["Set WTS / WTB", "Cheapest in-game seller / highest in-game buyer for the full set."],
     ["Parts WTS Σ / WTB Σ", "Sum over parts (× quantity) of the cheapest seller / highest buyer. ≥N means some part has no in-game order on that side."],
+    ["Released", "The prime's original release date. Primes leave the unvaulted pool oldest first, so sort by it (oldest first) to see which sets will be vaulted next."],
     ["Δ WTS", "Set WTS − Parts WTS Σ. Positive: buying the parts is cheaper than the set, so build and sell the set."],
     ["Δ WTB", "Set WTB − Parts WTB Σ. Negative: buyers pay more for loose parts than for the set."],
     ["% from 90d avg", "Set WTS vs the set's average sold price over 90 days, weighted by volume (hover for the average). Negative means the set is cheaper than usual."],
@@ -1052,7 +1074,8 @@ document.addEventListener("click", e => {
   const th = e.target.closest("th[data-sort]");
   if (th) {
     const st = prefs[th.dataset.tab], key = th.dataset.sort;
-    if (st.sort === key) st.dir *= -1; else { st.sort = key; st.dir = key === "name" ? 1 : (key === "dip" ? 1 : -1); }
+    // Names, dips and release dates read best ascending (A→Z, deepest dip, oldest first); the rest descending.
+    if (st.sort === key) st.dir *= -1; else { st.sort = key; st.dir = ["name", "dip", "released"].includes(key) ? 1 : -1; }
     savePrefs(); render(); return;
   }
   const segBtn = e.target.closest("[data-seg]");
@@ -1198,10 +1221,11 @@ function holoSelect(sel) {
   sync();
 }
 
-// ---------- Baro countdown ----------
-// Header timer to Baro's next arrival (or departure while he's here), ticking every second on every tab.
-// The schedule comes from the mods data when loaded, else from the light /api/baro (no market requests).
-let baroInfo = null;
+// ---------- header timers: Baro and Teshin ----------
+// Countdown to Baro's next arrival (or departure while he's here), and Teshin's Steel Path reward this week
+// with the wait until his next Endo week. Both tick every second on every tab. They come from the light
+// /api/world (no market requests), stored until Baro's visit or Teshin's week ends; mods data refreshes Baro.
+let baroInfo = null, teshinInfo = null;
 function countdown(ms) {
   const s = Math.max(Math.floor(ms / 1000), 0);
   const d = Math.floor(s / 86400), hms = [Math.floor(s % 86400 / 3600), Math.floor(s % 3600 / 60), s % 60]
@@ -1214,24 +1238,24 @@ function baroPhase(b) {
   if (now < e) return { here: true, until: e };
   return null;
 }
-function setBaro(b) { if (b) { baroInfo = b; tickBaro(); } }
-let baroFetchedAt = 0;
-function loadBaro(force = false) {
-  // A saved schedule is good until his visit ends; after that a new visit is scheduled, so ask again
-  // (at most every 5 minutes, in case the schedule source hasn't caught up yet).
-  const stored = force ? null : readStored("baro");
-  if (stored && Date.now() < Date.parse(stored.baro.expiry)) return setBaro(stored.baro);
-  if (Date.now() - baroFetchedAt < 5 * 60e3) return;
-  baroFetchedAt = Date.now();
-  fetch("/api/baro").then(r => (r.ok ? r.json() : null)).then(body => {
-    if (body && body.baro) { writeStored("baro", body); setBaro(body.baro); }
+function setBaro(b) { if (b) { baroInfo = b; tickTimers(); } }
+let worldFetchedAt = 0;
+function loadWorld(force = false) {
+  // Good until whichever ends first; then ask again (at most every 5 minutes, in case the source lags).
+  const stored = force ? null : readStored("world");
+  const until = w => Math.min(Date.parse(w.baro?.expiry ?? 0), Date.parse(w.teshin?.expiry ?? 0));
+  if (stored && Date.now() < until(stored)) { teshinInfo = stored.teshin; return setBaro(stored.baro); }
+  if (Date.now() - worldFetchedAt < 5 * 60e3) return;
+  worldFetchedAt = Date.now();
+  fetch("/api/world").then(r => (r.ok ? r.json() : null)).then(body => {
+    if (body && body.baro) { writeStored("world", body); teshinInfo = body.teshin; setBaro(body.baro); }
   }).catch(() => {});
 }
-function tickBaro() {
+function tickTimers() {
   const el = $("#baro-timer"), phase = baroInfo && baroPhase(baroInfo);
   if (!phase) {
     el.hidden = true;
-    if (baroInfo) { baroInfo = null; loadBaro(true); }  // the visit just ended: fetch the next one
+    if (baroInfo) { baroInfo = null; loadWorld(true); }  // the visit just ended: fetch the next one
   } else {
     const label = phase.here ? "BARO KI'TEER LEAVES IN" : "BARO KI'TEER ARRIVES IN", left = countdown(phase.until - Date.now());
     el.hidden = false;
@@ -1241,22 +1265,49 @@ function tickBaro() {
     el.querySelector(".bt-sub").textContent = baroInfo.location || "";
     el.setAttribute("aria-label", `${label.toLowerCase()} ${left}, ${baroInfo.location || ""}. Open primed mods.`);
   }
+  tickTeshin();
   // Big timers inside windows carry their target time and tick with it.
   document.querySelectorAll("[data-until]").forEach(x => { x.textContent = countdown(Date.parse(x.dataset.until) - Date.now()); });
 }
-$("#baro-timer").addEventListener("click", () => document.querySelector('nav.tabs button[data-tab="mods"]').click());
+function tickTeshin() {
+  const el = $("#teshin-timer"), t = teshinInfo;
+  if (!t || !t.expiry) { el.hidden = true; return; }
+  if (Date.now() >= Date.parse(t.expiry)) { el.hidden = true; loadWorld(true); return; }  // new week: new reward
+  el.hidden = false;
+  el.classList.toggle("endo", !!t.endo_now);
+  let label, time, sub;
+  if (t.endo_now) {
+    label = `TESHIN · ${t.reward} THIS WEEK`.toUpperCase();
+    time = countdown(Date.parse(t.expiry) - Date.now());
+    sub = `left · ${t.cost ?? "?"} Steel Essence`;
+  } else if (t.next_endo) {
+    label = "TESHIN · NEXT ENDO WEEK IN";
+    time = countdown(Date.parse(t.next_endo) - Date.now());
+    sub = `this week: ${t.reward}`;
+  } else {
+    label = "TESHIN · STEEL PATH";
+    time = t.reward || "—";
+    sub = `ends ${new Date(t.expiry).toLocaleDateString()}`;
+  }
+  el.querySelector(".bt-label").textContent = label;
+  el.querySelector(".bt-time").textContent = time;
+  el.querySelector(".bt-sub").textContent = sub;
+  el.setAttribute("aria-label", `${label.toLowerCase()} ${time}, ${sub}. Open primed mods.`);
+}
+const goToModsTab = () => document.querySelector('nav.tabs button[data-tab="mods"]').click();
+$("#baro-timer").addEventListener("click", goToModsTab);
+$("#teshin-timer").addEventListener("click", goToModsTab);
 
 // ---------- start ----------
 $("#platform").value = prefs.platform;
 $("#depth").value = prefs.depth;
 document.querySelectorAll(".hfield select").forEach(holoSelect);
 render();
-// Load the visible tab first, then prefetch the other one.
 // Only the visible tab: from this browser's stored copy when it's under a day old, otherwise fetched.
 load(prefs.tab);
 if (prefs.tab === "sets" && prefs.sets.source === "vaulted") loadVaulted();
-if (!baroInfo) loadBaro();
-setInterval(() => { renderSync(); tickBaro(); }, 1000);
+loadWorld();
+setInterval(() => { renderSync(); tickTimers(); }, 1000);
 </script>
 </body>
 </html>

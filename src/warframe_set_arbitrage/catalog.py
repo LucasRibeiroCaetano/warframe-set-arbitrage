@@ -53,6 +53,8 @@ class Target:
     parts: list[Part] = field(default_factory=list)
     # Unvaulted set where some part does not drop from any active relic.
     partial: bool = False
+    # The prime's original release date (YYYY-MM-DD). Older primes in the unvaulted pool are vaulted first.
+    released: str | None = None
 
 
 @dataclass
@@ -141,6 +143,11 @@ def set_parts(http: Http, set_slug: str) -> list[Part]:
     ]
 
 
+def base(t: Target) -> str:
+    """The prime's own name, as WFCD lists it: "Ivara Prime Set" -> "Ivara Prime"."""
+    return t.name.removesuffix(" Set")
+
+
 def build_catalog(http: Http, all_unvaulted: bool = False) -> Catalog:
     items = http.cached_json("market_items", f"{MARKET}/items", ttl=DAY)["data"]
     sets_by_name = {_name(i): i for i in items if "set" in i["tags"] and "prime" in i["tags"]}
@@ -167,12 +174,8 @@ def build_catalog(http: Http, all_unvaulted: bool = False) -> Catalog:
             add(item, RESURGENCE)
 
     hidden: list[str] = []
+    info = release_info(http)
     if not all_unvaulted:
-        info = release_info(http)
-
-        def base(t: Target) -> str:
-            return t.name.removesuffix(" Set")
-
         fresh_frame_dates = {
             info[base(t)]["releaseDate"]
             for t in targets.values()
@@ -189,6 +192,7 @@ def build_catalog(http: Http, all_unvaulted: bool = False) -> Catalog:
 
     for t in targets.values():
         t.parts = set_parts(http, t.slug)
+        t.released = (info.get(base(t)) or {}).get("releaseDate")
         if t.sources == {UNVAULTED}:
             t.partial = any(p.name not in dropping_parts for p in t.parts)
 
@@ -212,6 +216,9 @@ def vaulted_targets(http: Http) -> list[Target]:
         if "set" in i["tags"] and "prime" in i["tags"] and (kind := _kind(i["tags"]))
         and _name(i) not in dropping_sets and i["gameRef"] not in pr_refs
     ]
+    info = release_info(http)
+    for t in targets:
+        t.released = (info.get(base(t)) or {}).get("releaseDate")
     return sorted(targets, key=lambda t: (t.kind != "frame", t.name))
 
 

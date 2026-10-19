@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from statistics import median
 
 from .catalog import DAY, HOUR, MARKET, _name, _parse_ts
@@ -133,6 +133,37 @@ def _baro(trader: dict) -> Baro:
         expiry=expiry,
         items={entry["item"] for entry in trader.get("inventory", []) if entry.get("item")},
     )
+
+
+STEEL_PATH = "https://api.warframestat.us/pc/steelPath?language=en"
+
+
+def teshin_status(http: Http) -> dict:
+    """Teshin's weekly Steel Path Honors reward, and when the Endo week comes round (Endo is what maxing mods costs).
+
+    The rotation is a fixed cycle of weekly rewards, so the weeks until Endo follow from the current one.
+    """
+    sp = http.cached_json("steel_path", STEEL_PATH, ttl=HOUR)
+    rotation = [r.get("name") for r in sp.get("rotation", [])]
+    current = (sp.get("currentReward") or {}).get("name")
+    activation = _parse_ts(sp.get("activation"))
+    endo_at = next((i for i, name in enumerate(rotation) if name and "Endo" in name), None)
+    weeks = None
+    if endo_at is not None and current in rotation:
+        weeks = (endo_at - rotation.index(current)) % len(rotation)
+    # Start of the next Endo week that hasn't begun yet (a full cycle away while it's Endo now).
+    next_endo = activation + timedelta(weeks=weeks or len(rotation)) if activation and weeks is not None else None
+    return {
+        "reward": current,
+        "cost": (sp.get("currentReward") or {}).get("cost"),
+        "activation": sp.get("activation"),
+        "expiry": sp.get("expiry"),
+        "endo_reward": rotation[endo_at] if endo_at is not None else None,
+        "endo_now": weeks == 0,
+        "weeks_to_endo": weeks,
+        "next_endo": next_endo.isoformat().replace("+00:00", "Z") if next_endo else None,
+        "rotation": rotation,
+    }
 
 
 def _rarity(tags: list[str]) -> str:

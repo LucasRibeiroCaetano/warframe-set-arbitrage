@@ -19,6 +19,9 @@ show everything that drops. Warframes and weapons are shown in separate tables.
 The web dashboard has two tabs: prime sets and primed mods around Baro's visits. It has sortable tables, per-set part
 breakdowns, and 90-day price charts for each mod. It uses a dark holo-terminal look: glowing chamfered windows over a
 blurred crop of Warframe's Corpus menu background (from the Warframe wiki, with the logo and login form cropped out).
+The header has live timers for Baro's next visit and Teshin's Steel Path reward (lit when he offers Endo, else the
+wait until his next Endo week), from `/api/world`. The sets tables have a Released column: sort it oldest first to
+see which unvaulted primes will be vaulted next.
 Run it locally with:
 
 ```bash

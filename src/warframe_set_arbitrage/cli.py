@@ -299,13 +299,13 @@ def market_url(slug: str) -> str:
 def write_csv(path: str, spreads: list[SetSpread]) -> None:
     with open(path, "w", newline="", encoding="utf-8") as fh:
         w = csv.writer(fh)
-        w.writerow(["set", "type", "sources", "partial", "set_wts", "set_wtb", "set_vol_48h", "set_vol_7d",
+        w.writerow(["set", "type", "released", "sources", "partial", "set_wts", "set_wtb", "set_vol_48h", "set_vol_7d",
                     "parts_wts", "parts_wtb", "min_part_vol_48h", "delta_wts", "delta_wtb", "set_avg_90d", "vs_avg_pct",
                     "market_url"])
         for s in spreads:
             t = s.target
             v = s.set_volume
-            w.writerow([t.name, t.kind, "+".join(sorted(t.sources)), t.partial, s.set_quote.wts,
+            w.writerow([t.name, t.kind, t.released, "+".join(sorted(t.sources)), t.partial, s.set_quote.wts,
                         s.set_quote.wtb, v and v.vol_48h, v and v.vol_7d, s.parts_wts, s.parts_wtb,
                         s.min_part_vol_48h, s.delta_wts, s.delta_wtb, v and v.avg_90d, s.vs_avg, market_url(t.slug)])
 
