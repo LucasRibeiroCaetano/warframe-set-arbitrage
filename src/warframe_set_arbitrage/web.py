@@ -1,6 +1,6 @@
 """JSON API and local server for the dashboard.
 
-The same handlers run as Vercel functions (api/sets.py, api/mods.py, api/vaulted.py)
+The same handlers run as Vercel functions (api/sets.py, api/mods.py, api/vaulted.py, api/baro.py)
 and behind `wfspread web`. On Vercel the CDN caches each response for its route's
 window (ROUTES), so warframe.market is hit at most once per window per query;
 locally an in-memory cache does the same job.
@@ -22,7 +22,7 @@ from urllib.parse import parse_qs, urlsplit
 
 from .catalog import RESURGENCE, UNVAULTED, VAULTED, attach_parts, build_catalog, vaulted_targets
 from .http import Http
-from .mods import ModSpread, baro_status, fetch_mod_spreads, primed_mods
+from .mods import Baro, ModSpread, baro_status, fetch_mod_spreads, primed_mods
 from .pricing import Quote, SetSpread, fetch_set_spreads
 
 STATIC = Path(__file__).parent / "static"
@@ -147,17 +147,31 @@ def mods_payload(query: dict[str, list[str]]) -> dict:
     return {
         "generated_at": _iso(datetime.now(timezone.utc)),
         **opts,
-        "baro": {
-            "active": baro.active,
-            "location": baro.location,
-            "activation": _iso(baro.activation),
-            "expiry": _iso(baro.expiry),
-            "primed_in_stock": sorted(i for i in baro.items if i.startswith("Primed ")),
-            "last_visit": baro.last_visit,
-            "last_visit_primed": sorted(baro.last_visit_items),
-        },
+        "baro": _baro(baro),
         "mods": [_mod(s) for s in spreads],
     }
+
+
+def _baro(baro: Baro) -> dict:
+    return {
+        "active": baro.active,
+        "location": baro.location,
+        "activation": _iso(baro.activation),
+        "expiry": _iso(baro.expiry),
+        "primed_in_stock": sorted(i for i in baro.items if i.startswith("Primed ")),
+        "last_visit": baro.last_visit,
+        "last_visit_primed": sorted(baro.last_visit_items),
+    }
+
+
+def baro_payload(query: dict[str, list[str]]) -> dict:
+    """Just Baro's schedule and stock, for the header countdown: no warframe.market requests."""
+    http = Http()
+    try:
+        baro = baro_status(http)
+    finally:
+        http.close()
+    return {"generated_at": _iso(datetime.now(timezone.utc)), "baro": _baro(baro)}
 
 
 def _mod(s: ModSpread) -> dict:
@@ -194,6 +208,7 @@ ROUTES = {
     "/api/sets": (sets_payload, CACHE_SECONDS),
     "/api/mods": (mods_payload, CACHE_SECONDS),
     "/api/vaulted": (vaulted_payload, 3600),
+    "/api/baro": (baro_payload, CACHE_SECONDS),
 }
 
 

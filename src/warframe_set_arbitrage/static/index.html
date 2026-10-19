@@ -69,6 +69,21 @@ header.top { display: flex; flex-wrap: wrap; gap: 16px 28px; align-items: center
   text-shadow: 0 0 18px rgba(63, 195, 224, 0.7), 0 0 2px #BDF2FD; margin: 0; }
 .logo-sub { font-family: Orbitron, sans-serif; font-weight: 700; font-size: 12px; letter-spacing: 0.42em; color: #3E8EA2; margin-top: 4px; padding-left: 3px; }
 .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: stretch; }
+/* Live countdown to Baro's next visit (or his departure while he's here), shown on every tab. */
+.baro-timer { display: grid; grid-template-columns: auto; justify-items: center; gap: 0; padding: 6px 18px 7px; min-height: 44px;
+  background: #0A2430; border: 1px solid var(--axis); border-radius: 3px; cursor: pointer; color: var(--ink);
+  box-shadow: 0 0 8px rgba(63, 195, 224, 0.25), inset 0 0 10px rgba(63, 195, 224, 0.1);
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.08s; }
+.baro-timer[hidden] { display: none; }
+.baro-timer:hover { border-color: #7FE3F7; box-shadow: 0 0 14px rgba(63, 195, 224, 0.6), inset 0 0 12px rgba(63, 195, 224, 0.2); }
+.baro-timer:active { transform: translateY(1px); box-shadow: inset 0 0 14px rgba(63, 195, 224, 0.4); }
+.bt-label { font-size: 11px; font-weight: 700; letter-spacing: 0.14em; color: var(--muted); }
+.bt-time { font-family: Orbitron, sans-serif; font-weight: 700; font-size: 22px; letter-spacing: 0.06em; color: var(--ink);
+  text-shadow: 0 0 12px rgba(63, 195, 224, 0.6); font-variant-numeric: tabular-nums; line-height: 1.2; }
+.bt-sub { font-size: 12px; color: var(--muted); }
+.baro-timer.here { border-color: var(--baro); box-shadow: 0 0 12px rgba(242, 194, 92, 0.45), inset 0 0 10px rgba(242, 194, 92, 0.15); }
+.baro-timer.here .bt-label { color: var(--baro); }
+.baro-timer.here .bt-time { color: #FFE3A3; text-shadow: 0 0 12px rgba(242, 194, 92, 0.65); }
 
 /* ---------- holo controls ----------
    Every control shares one state language:
@@ -330,6 +345,11 @@ footer code { font-size: 11px; color: var(--ink-2); }
       <h1 class="logo">WF ARBITRAGE</h1>
       <div class="logo-sub">MARKET TERMINAL</div>
     </div>
+    <button type="button" class="baro-timer" id="baro-timer" hidden title="Open primed mods">
+      <span class="bt-label">BARO KI'TEER ARRIVES IN</span>
+      <span class="bt-time" role="timer">--:--:--</span>
+      <span class="bt-sub"></span>
+    </button>
     <div class="controls">
       <label class="hfield"><span>Platform</span>
         <select id="platform">
@@ -449,6 +469,7 @@ function load(tab, force = false) {
   const stored = force ? null : readStored(`${tab}?${q}`);
   if (stored) {
     data[tab] = stored; status[tab] = "ready"; delete errors[tab]; started[tab] = { q, t: Date.now() };
+    if (tab === "mods") setBaro(stored.baro);
     updateCounts(); updateBusy();
     if (tab === prefs.tab) render();
     return queue;
@@ -463,6 +484,7 @@ function load(tab, force = false) {
       const body = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
       if (!res.ok || body.error) throw new Error(body.error || `HTTP ${res.status}`);
       writeStored(`${tab}?${q}`, body);
+      if (tab === "mods") setBaro(body.baro);
       if (started[tab].q !== q) return;
       data[tab] = body; status[tab] = "ready"; delete errors[tab];
     } catch (e) {
@@ -641,7 +663,7 @@ function renderSets() {
   const inRotation = d.sets.filter(s => s.pr).map(s => s.name);
   const prWin = win("Prime Resurgence", `
     ${d.pr_expiry ? `<div><div class="kicker">Varzia's rotation ends in</div>
-      <div class="big-timer" role="timer">${rel(d.pr_expiry).replace("in ", "").toUpperCase()}</div>
+      <div class="big-timer" role="timer" data-until="${d.pr_expiry}">${countdown(Date.parse(d.pr_expiry) - Date.now())}</div>
       <div class="centered">${when(d.pr_expiry)}</div></div>` : `<div class="kicker">Rotation end unknown</div>`}
     <div class="divider"></div>
     <div class="kicker">In this rotation</div>
@@ -742,7 +764,7 @@ function renderMods() {
   let baroBody;
   if (b.active) {
     baroBody = `<div><div class="kicker">Baro Ki'Teer is here · leaves in</div>
-      <div class="big-timer" role="timer">${rel(b.expiry).replace("in ", "").toUpperCase()}</div>
+      <div class="big-timer" role="timer" data-until="${b.expiry}">${countdown(Date.parse(b.expiry) - Date.now())}</div>
       <div class="centered">${esc(b.location)} · until ${when(b.expiry)}</div></div>
       <div class="divider"></div>
       <div class="kicker">Primed mods in stock</div>
@@ -752,7 +774,7 @@ function renderMods() {
     const start = b.last_visit ? Date.parse(b.last_visit + "T13:00:00Z") : null;
     const cycle = start ? Math.min(Math.max((Date.now() - start) / (Date.parse(b.activation) - start), 0), 1) : null;
     baroBody = `<div><div class="kicker">Baro Ki'Teer arrives in</div>
-      <div class="big-timer" role="timer">${rel(b.activation).replace("in ", "").toUpperCase()}</div>
+      <div class="big-timer" role="timer" data-until="${b.activation}">${countdown(Date.parse(b.activation) - Date.now())}</div>
       <div class="centered">${esc(b.location)} · ${when(b.activation)}</div></div>
       ${cycle != null ? `<div><div class="meter-label"><span>Since his last visit</span><span>${Math.round(cycle * 100)}%</span></div>
         <div class="meter" role="img" aria-label="${Math.round(cycle * 100)}% of the way to his next visit"><div style="width:${(cycle * 100).toFixed(1)}%"></div></div></div>` : ""}
@@ -1159,6 +1181,54 @@ function holoSelect(sel) {
   sync();
 }
 
+// ---------- Baro countdown ----------
+// Header timer to Baro's next arrival (or departure while he's here), ticking every second on every tab.
+// The schedule comes from the mods data when loaded, else from the light /api/baro (no market requests).
+let baroInfo = null;
+function countdown(ms) {
+  const s = Math.max(Math.floor(ms / 1000), 0);
+  const d = Math.floor(s / 86400), hms = [Math.floor(s % 86400 / 3600), Math.floor(s % 3600 / 60), s % 60]
+    .map(n => String(n).padStart(2, "0")).join(":");
+  return d ? `${d}D ${hms}` : hms;
+}
+function baroPhase(b) {
+  const now = Date.now(), a = Date.parse(b.activation), e = Date.parse(b.expiry);
+  if (now < a) return { here: false, until: a };
+  if (now < e) return { here: true, until: e };
+  return null;
+}
+function setBaro(b) { if (b) { baroInfo = b; tickBaro(); } }
+let baroFetchedAt = 0;
+function loadBaro(force = false) {
+  // A saved schedule is good until his visit ends; after that a new visit is scheduled, so ask again
+  // (at most every 5 minutes, in case the schedule source hasn't caught up yet).
+  const stored = force ? null : readStored("baro");
+  if (stored && Date.now() < Date.parse(stored.baro.expiry)) return setBaro(stored.baro);
+  if (Date.now() - baroFetchedAt < 5 * 60e3) return;
+  baroFetchedAt = Date.now();
+  fetch("/api/baro").then(r => (r.ok ? r.json() : null)).then(body => {
+    if (body && body.baro) { writeStored("baro", body); setBaro(body.baro); }
+  }).catch(() => {});
+}
+function tickBaro() {
+  const el = $("#baro-timer"), phase = baroInfo && baroPhase(baroInfo);
+  if (!phase) {
+    el.hidden = true;
+    if (baroInfo) { baroInfo = null; loadBaro(true); }  // the visit just ended: fetch the next one
+  } else {
+    const label = phase.here ? "BARO KI'TEER LEAVES IN" : "BARO KI'TEER ARRIVES IN", left = countdown(phase.until - Date.now());
+    el.hidden = false;
+    el.classList.toggle("here", phase.here);
+    el.querySelector(".bt-label").textContent = label;
+    el.querySelector(".bt-time").textContent = left;
+    el.querySelector(".bt-sub").textContent = baroInfo.location || "";
+    el.setAttribute("aria-label", `${label.toLowerCase()} ${left}, ${baroInfo.location || ""}. Open primed mods.`);
+  }
+  // Big timers inside windows carry their target time and tick with it.
+  document.querySelectorAll("[data-until]").forEach(x => { x.textContent = countdown(Date.parse(x.dataset.until) - Date.now()); });
+}
+$("#baro-timer").addEventListener("click", () => document.querySelector('nav.tabs button[data-tab="mods"]').click());
+
 // ---------- start ----------
 $("#platform").value = prefs.platform;
 $("#depth").value = prefs.depth;
@@ -1168,7 +1238,8 @@ render();
 // Only the visible tab: from this browser's stored copy when it's under a day old, otherwise fetched.
 load(prefs.tab);
 if (prefs.tab === "sets" && prefs.sets.source === "vaulted") loadVaulted();
-setInterval(renderSync, 1000);
+if (!baroInfo) loadBaro();
+setInterval(() => { renderSync(); tickBaro(); }, 1000);
 </script>
 </body>
 </html>
