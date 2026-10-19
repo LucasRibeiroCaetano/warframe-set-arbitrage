@@ -47,6 +47,32 @@ Src: `PR` is Varzia's current stock, `Unv` is fully dropping, and `Unv*` means a
 Volume shown in yellow is under 5 trades in 48h; red means 0. Volume counts trades that players reported as closed on
 the site, so real volume is higher. `-d` also shows per-part 48h and 7d volume and the average sold price over the last 48h.
 
+## Primed mods around Baro's visits
+
+When Baro Ki'Teer brings a primed mod, its price dips. If the mod has steady demand, buying it then and selling a
+couple of months after he leaves usually pays. `wfspread mods` tracks a watchlist of those mods (Continuity, Flow,
+Reach, Fever Strike, Target Cracker, Pressure Point, ...) plus any primed mod in Baro's current stock:
+
+```bash
+uv run wfspread mods                   # watchlist, deepest dip first
+uv run wfspread mods --all             # every primed mod
+uv run wfspread mods --sort endo       # best max-rank premium per endo
+uv run wfspread mods -f flow --csv mods.csv
+```
+
+| Column | Meaning |
+| --- | --- |
+| Baro | `here` = in Baro's current stock |
+| R0 WTS / WTB | Cheapest in-game seller / highest in-game buyer at rank 0 |
+| R0 90d median | Median of the daily median rank 0 prices over 90 days: the usual price |
+| Dip | R0 WTS vs the 90d median. **−** → cheaper than usual, which is the buy signal |
+| Max WTS / WTB | Same for max rank |
+| Max premium | Max WTS − R0 WTS: what maxing adds when you list it |
+| p / 1k endo | Max premium per 1,000 endo. A primed mod takes 40,920 endo and 1,976,436 credits to max |
+
+The heading line says when Baro arrives or leaves. A full run is 2 order requests per mod plus 1 stats request
+(stats are cached for 1 h), so about 20 s for the watchlist.
+
 ## Data sources
 
 - Orders: `api.warframe.market/v2/orders/item/{slug}/top`. These are the top 5 buy/sell orders from players who are in game.
@@ -56,6 +82,8 @@ the site, so real volume is higher. `-d` also shows per-part 48h and 7d volume a
 - Release/vault history: `api.warframestat.us/warframes` and `/weapons` (WFCD), cached for 7 days. Weapons are matched
   to frames by release date.
 - Varzia stock: `api.warframestat.us/pc/vaultTrader`, cached for 1 h.
+- Baro stock and schedule: `api.warframestat.us/pc/voidTrader`, cached for 1 h (refetched once he arrives).
+- Mod prices by rank: the same orders endpoint with `?rank=0` / `?rank={maxRank}`, and per-rank series from the stats endpoint.
 
 Metadata is cached in `~/.cache/warframe-set-arbitrage`. You can override that path with `WFSPREAD_CACHE`. Pass `--refresh` to refetch it.
 Order prices are never cached.

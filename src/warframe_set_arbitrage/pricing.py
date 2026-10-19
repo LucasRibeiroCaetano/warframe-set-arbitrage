@@ -29,8 +29,9 @@ class Quote:
         return self.wts - self.wtb
 
 
-def fetch_quote(http: Http, slug: str, depth: int = 1) -> Quote:
-    data = http.get_json(f"{MARKET}/orders/item/{slug}/top")["data"]
+def fetch_quote(http: Http, slug: str, depth: int = 1, rank: int | None = None) -> Quote:
+    query = "" if rank is None else f"?rank={rank}"
+    data = http.get_json(f"{MARKET}/orders/item/{slug}/top{query}")["data"]
     sells = sorted(o["platinum"] for o in data.get("sell", []))
     buys = sorted((o["platinum"] for o in data.get("buy", [])), reverse=True)
     return Quote(

@@ -29,6 +29,7 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     p = argparse.ArgumentParser(
         prog="wfspread",
         description="Set vs. parts spreads on warframe.market for unvaulted and Prime Resurgence primes.",
+        epilog="Run 'wfspread mods' for primed mods around Baro's visits.",
     )
     p.add_argument("--source", choices=["all", "pr", "unvaulted"], default="all")
     p.add_argument("--pr", dest="source", action="store_const", const="pr",
@@ -88,6 +89,11 @@ def source_label(spread: SetSpread) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
+    argv = sys.argv[1:] if argv is None else argv
+    if argv[:1] == ["mods"]:
+        from .mods_cli import main as mods_main
+
+        return mods_main(argv[1:])
     args = parse_args(argv)
     console = Console()
     http = Http(rps=args.rps, refresh=args.refresh, platform=args.platform)
