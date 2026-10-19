@@ -91,6 +91,7 @@ def mod_table(spreads: list[ModSpread], with_stats: bool) -> Table:
     if with_stats:
         table.add_column("R0 90d\nmedian", justify="right", style="dim")
         table.add_column("Dip", justify="right")
+        table.add_column("vs 90d\navg", justify="right")
         table.add_column("R0 vol\n48h", justify="right")
     table.add_column("Max WTS", justify="right")
     table.add_column("Max WTB", justify="right")
@@ -109,7 +110,7 @@ def mod_table(spreads: list[ModSpread], with_stats: bool) -> Table:
             fmt(s.r0.wtb),
         ]
         if with_stats:
-            row += [fmt(r0 and r0.median_90d), fmt_dip(s.dip), fmt_vol(r0 and r0.vol_48h)]
+            row += [fmt(r0 and r0.median_90d), fmt_dip(s.dip), fmt_dip(s.vs_avg), fmt_vol(r0 and r0.vol_48h)]
         row += [fmt(s.rmax.wts), fmt(s.rmax.wtb)]
         if with_stats:
             row.append(fmt_vol(rmax and rmax.vol_48h))
@@ -174,11 +175,11 @@ def write_csv(path: str, spreads: list[ModSpread]) -> None:
     with open(path, "w", newline="", encoding="utf-8") as fh:
         w = csv.writer(fh)
         w.writerow(["mod", "max_rank", "in_baro", "last_baro", "baro_visits", "r0_wts", "r0_wtb", "r0_median_90d", "r0_low_90d", "r0_high_90d",
-                    "dip_pct", "r0_vol_48h", "max_wts", "max_wtb", "max_vol_48h", "premium", "endo_to_max",
+                    "dip_pct", "r0_avg_90d", "vs_avg_pct", "r0_vol_48h", "max_wts", "max_wtb", "max_vol_48h", "premium", "endo_to_max",
                     "credits_to_max", "plat_per_1k_endo"])
         for s in spreads:
             r0, rmax = s.rank_stats(0), s.rank_stats(s.mod.max_rank)
             w.writerow([s.mod.name, s.mod.max_rank, s.mod.in_baro, s.mod.last_baro, s.mod.baro_visits, s.r0.wts, s.r0.wtb, r0 and r0.median_90d,
-                        r0 and r0.low_90d, r0 and r0.high_90d, s.dip, r0 and r0.vol_48h, s.rmax.wts, s.rmax.wtb,
+                        r0 and r0.low_90d, r0 and r0.high_90d, s.dip, r0 and r0.avg_90d, s.vs_avg, r0 and r0.vol_48h, s.rmax.wts, s.rmax.wtb,
                         rmax and rmax.vol_48h, s.premium, s.mod.endo_to_max, s.mod.credits_to_max,
                         s.plat_per_kendo])

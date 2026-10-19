@@ -85,6 +85,7 @@ uv run wfspread mods -f flow --csv mods.csv
 | R0 WTS / WTB | Cheapest in-game seller / highest in-game buyer at rank 0 |
 | R0 90d median | Median of the daily median rank 0 prices over 90 days: the usual price |
 | Dip | R0 WTS vs the 90d median. **−** → cheaper than usual, which is the buy signal |
+| % from 90d avg | R0 WTS vs the volume-weighted average sold price over 90 days. 90 days is the longest history warframe.market keeps; heavy trading in a Baro crash pulls the average down more than the median |
 | Max WTS / WTB | Same for max rank |
 | Max premium | Max WTS − R0 WTS: what maxing adds when you list it |
 | p / 1k endo | Max premium per 1,000 endo. A primed mod takes 40,920 endo and 1,976,436 credits to max |

@@ -175,6 +175,7 @@ class RankStats:
 
     vol_48h: int
     median_90d: float | None  # median of the daily medians: the "usual" price, robust to Baro dips
+    avg_90d: float | None  # volume-weighted average sold price over 90 days (the longest the market keeps)
     low_90d: float | None
     high_90d: float | None
     history: list[tuple[str, float]]  # (date, median) per day over 90 days
@@ -185,11 +186,14 @@ def _reduce_mod_stats(payload: dict) -> dict:
     out = {}
     for rank in {b.get("mod_rank") for b in closed.get("90days", [])}:
         hourly = [b for b in closed.get("48hours", []) if b.get("mod_rank") == rank]
-        history = [(b["datetime"][:10], b["median"]) for b in closed.get("90days", []) if b.get("mod_rank") == rank]
+        days = [b for b in closed.get("90days", []) if b.get("mod_rank") == rank]
+        history = [(b["datetime"][:10], b["median"]) for b in days]
         daily = [m for _, m in history]
+        vol_90d = sum(b["volume"] for b in days)
         out[str(rank)] = {
             "vol_48h": sum(b["volume"] for b in hourly),
             "median_90d": median(daily) if daily else None,
+            "avg_90d": sum(b["avg_price"] * b["volume"] for b in days) / vol_90d if vol_90d else None,
             "low_90d": min(daily, default=None),
             "high_90d": max(daily, default=None),
             "history": history,
@@ -197,12 +201,18 @@ def _reduce_mod_stats(payload: dict) -> dict:
     return out
 
 
+# Bump when _reduce_mod_stats changes shape, so stale cache files aren't read back.
+_STATS_KEY = "mod_stats_v2_{slug}"
+
+
 def mod_stats_cached(http: Http, slug: str) -> bool:
-    return http.is_cached(f"mod_stats_{slug}", HOUR)
+    return http.is_cached(_STATS_KEY.format(slug=slug), HOUR)
 
 
 def fetch_mod_stats(http: Http, slug: str) -> dict[int, RankStats]:
-    data = http.cached_json(f"mod_stats_{slug}", STATS_URL.format(slug=slug), ttl=HOUR, transform=_reduce_mod_stats)
+    data = http.cached_json(
+        _STATS_KEY.format(slug=slug), STATS_URL.format(slug=slug), ttl=HOUR, transform=_reduce_mod_stats
+    )
     return {int(rank): RankStats(**s) for rank, s in data.items() if rank != "None"}
 
 
@@ -249,6 +259,12 @@ class ModSpread:
         """Live rank 0 WTS vs its 90-day median, in %. Negative: cheaper than usual (Baro dip)."""
         s = self.rank_stats(0)
         return _pct(self.r0.wts, s.median_90d if s else None)
+
+    @property
+    def vs_avg(self) -> float | None:
+        """Live rank 0 WTS vs its 90-day volume-weighted average, in %."""
+        s = self.rank_stats(0)
+        return _pct(self.r0.wts, s.avg_90d if s else None)
 
     @property
     def premium(self) -> float | None:

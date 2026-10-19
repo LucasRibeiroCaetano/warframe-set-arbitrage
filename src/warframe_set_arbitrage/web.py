@@ -149,6 +149,7 @@ def _mod(s: ModSpread) -> dict:
         "r0_stats": stats(0),
         "rmax_stats": stats(m.max_rank),
         "dip": s.dip,
+        "vs_avg": s.vs_avg,
         "premium": s.premium,
         "plat_per_kendo": s.plat_per_kendo,
     }

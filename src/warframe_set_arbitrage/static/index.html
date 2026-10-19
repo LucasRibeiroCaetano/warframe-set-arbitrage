@@ -484,6 +484,7 @@ const modCols = [
   { key: "r0_wtb", label: "R0<br>WTB", sort: r => r.r0.wtb, title: "Highest in-game buyer at rank 0" },
   { key: "median", label: "R0 90d<br>median", sort: r => r.r0_stats?.median_90d, title: "Median of daily median rank 0 prices over 90 days" },
   { key: "dip", label: "Dip", title: "R0 WTS vs the 90d median. − → cheaper than usual (buy signal)" },
+  { key: "vs_avg", label: "% from<br>90d avg", title: "R0 WTS vs the volume-weighted average sold price over 90 days" },
   { key: "r0_vol", label: "R0 vol<br>48h", sort: r => r.r0_stats?.vol_48h },
   { key: "max_wts", label: "Max<br>WTS", sort: r => r.rmax.wts, title: "Cheapest in-game seller at max rank" },
   { key: "max_wtb", label: "Max<br>WTB", sort: r => r.rmax.wtb, title: "Highest in-game buyer at max rank" },
@@ -519,13 +520,16 @@ function modRow(m) {
     <td title="${m.baro_visits ? `Baro has brought it ${m.baro_visits} times` : ""}">${m.last_baro
       ? `${shortDate(m.last_baro)} <span class="dim">${daysAgo(m.last_baro)}</span>` : '<span class="na">—</span>'}</td>
     <td>${fmt(m.r0.wts)}</td><td>${fmt(m.r0.wtb)}</td><td class="dim">${fmt(s0?.median_90d)}</td>
-    <td>${signed(m.dip == null ? null : Math.round(m.dip), "%", true)}</td><td>${vol(s0?.vol_48h)}</td>
+    <td>${signed(m.dip == null ? null : Math.round(m.dip), "%", true)}</td>
+    <td title="${s0?.avg_90d != null ? `90d average ${fmt(Math.round(s0.avg_90d * 10) / 10)}p` : ""}">${signed(m.vs_avg == null ? null : Math.round(m.vs_avg), "%", true)}</td>
+    <td>${vol(s0?.vol_48h)}</td>
     <td>${fmt(m.rmax.wts)}</td><td>${fmt(m.rmax.wtb)}</td><td>${vol(sm?.vol_48h)}</td>
     <td>${signed(m.premium)}</td><td>${fmt(m.plat_per_kendo == null ? null : Math.round(m.plat_per_kendo * 10) / 10)}</td></tr>`;
   if (!open) return row;
   const facts = `<dl class="facts">
     <dt>Rank 0 90d range</dt><dd>${fmt(s0?.low_90d)}–${fmt(s0?.high_90d)}p</dd>
     <dt>Rank ${m.max_rank} 90d range</dt><dd>${fmt(sm?.low_90d)}–${fmt(sm?.high_90d)}p</dd>
+    <dt>Rank 0 90d average</dt><dd>${fmt(s0?.avg_90d == null ? null : Math.round(s0.avg_90d * 10) / 10)}p</dd>
     <dt>Rank ${m.max_rank} 90d median</dt><dd>${fmt(sm?.median_90d)}p</dd>
     <dt>Sellers / buyers (R0)</dt><dd>${m.r0.sellers} / ${m.r0.buyers}</dd>
     <dt>Sellers / buyers (max)</dt><dd>${m.rmax.sellers} / ${m.rmax.buyers}</dd>
@@ -696,6 +700,7 @@ const HELP = {
   ],
   mods: [
     ["Dip", "Live rank 0 WTS vs the 90-day median of daily medians. Negative means cheaper than usual: buy during Baro's visit, sell a couple of months after he leaves."],
+    ["% from 90d avg", "Live rank 0 WTS vs the average sold price over 90 days, weighted by volume (90 days is the most history warframe.market keeps). Unlike the median, heavy trading during a Baro crash pulls it down."],
     ["Max premium", "Max rank WTS − rank 0 WTS: what maxing adds when you list it."],
     ["p / 1k endo", "Max premium per 1,000 endo. A primed (legendary) mod takes 40,920 endo and 1,976,436 credits to max; credits aren't counted."],
     ["Watchlist", "Primed mods with steady demand (Continuity, Flow, Reach, Fever Strike, Target Cracker, …) plus anything Baro is selling now or brought on his last visit."],
